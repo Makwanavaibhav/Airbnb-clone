@@ -1,11 +1,9 @@
-import { Button } from "@/components/ui/button"
+import Header from "./components/Header/index.jsx";
+import Logo from "./assets/logo/long-logo.png";
 
-export default function App() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-gray-50">
-      <Button className="bg-airbnb hover:bg-[#E31C5F]">
-        Airbnb Button
-      </Button>
-    </div>
-  )
+function app(){
+  return<div className="app">
+    <Header />
+  </div>
 }
+export default app; 
