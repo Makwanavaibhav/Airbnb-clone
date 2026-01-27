@@ -4,10 +4,11 @@ import ShortLogo from "../../assets/logo/logo.png";
 import House from "../../assets/logo/house.png";
 import Experiences from "../../assets/logo/Experience.png";
 import Services from "../../assets/logo/Services.png";
-import Host  from "../../assets/logo/host.png";
+import Host from "../../assets/logo/host.png";
+import MobileHeader from "../Mobileview/MobileHeader";
 import { Search, Globe, Menu, CircleQuestionMark, Sun, Moon } from "lucide-react";
-import { DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuSeparator,DropdownMenuTrigger,} from "../ui/dropdown-menu.jsx";
-import { Dialog,DialogContent,DialogHeader,DialogTitle,DialogTrigger,} from "../ui/dialog.jsx";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.jsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog.jsx";
 
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -19,15 +20,29 @@ function Header() {
   const [translateEnabled, setTranslateEnabled] = useState(true);
   const [activeLocaleTab, setActiveLocaleTab] = useState("language");
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 800);
+    };
+
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleResize);
+
+    // Initial check
+    handleResize();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
-  
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
@@ -117,12 +132,17 @@ function Header() {
   const searchOptions = [
     { key: "where", title: "Where", subtitle: "Search destinations" },
     { key: "when", title: "When", subtitle: "Add dates" },
-    { 
-      key: "who", 
-      title: activeTab === "Services" ? "Type of services" : "Who", 
-      subtitle: activeTab === "Services" ? "Add services" : "Add guests" 
+    {
+      key: "who",
+      title: activeTab === "Services" ? "Type of services" : "Who",
+      subtitle: activeTab === "Services" ? "Add services" : "Add guests"
     },
   ];
+
+  // If it's mobile view, only show the MobileHeader component
+  if (isMobile) {
+    return <MobileHeader />;
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 pt-6 pb-4 transition-all duration-300 border-b border-gray-200 dark:border-gray-800">
@@ -479,6 +499,7 @@ function Header() {
           </div>
         </div>
       </div>
+      <MobileHeader />
     </header>
   );
 }
