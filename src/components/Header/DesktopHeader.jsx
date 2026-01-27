@@ -1,18 +1,15 @@
+// DesktopHeader.jsx
 import React, { useState, useEffect } from "react";
 import LongLogo from "../../assets/logo/long-logo.png";
-import ShortLogo from "../../assets/logo/logo.png";
 import House from "../../assets/logo/house.png";
 import Experiences from "../../assets/logo/Experience.png";
 import Services from "../../assets/logo/Services.png";
 import Host from "../../assets/logo/host.png";
-import MobileHeader from "../Mobileview/MobileHeader";
 import { Search, Globe, Menu, CircleQuestionMark, Sun, Moon } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.jsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog.jsx";
 
-function Header() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [activeTab, setActiveTab] = useState("Homes");
+function DesktopHeader({ isScrolled, activeTab, setActiveTab }) {
   const [selectedHostType, setSelectedHostType] = useState(null);
   const [openLanguageModal, setOpenLanguageModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
@@ -20,28 +17,6 @@ function Header() {
   const [translateEnabled, setTranslateEnabled] = useState(true);
   const [activeLocaleTab, setActiveLocaleTab] = useState("language");
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 800);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleResize);
-
-    // Initial check
-    handleResize();
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -139,11 +114,6 @@ function Header() {
     },
   ];
 
-  // If it's mobile view, only show the MobileHeader component
-  if (isMobile) {
-    return <MobileHeader />;
-  }
-
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 pt-6 pb-4 transition-all duration-300 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-1440px mx-auto px-6">
@@ -151,8 +121,7 @@ function Header() {
           
           {/* Logo */}
           <div>
-            <img src={LongLogo} alt="Logo" className="h-8 w-auto hidden md:block" />
-            <img src={ShortLogo} alt="Logo" className="h-8 w-auto block md:hidden" />
+            <img src={LongLogo} alt="Logo" className="h-8 w-auto" />
           </div>
 
           {/* Center Nav */}
@@ -167,7 +136,7 @@ function Header() {
                   <img
                     src={item.icon}
                     alt=""
-                    className="h-10 w-10 object-contain"
+                    className="h-10 w-10 object-contain group-hover:scale-125"
                   />
                   {item.badge && (
                     <span className="absolute -top-1 -right-6 bg-[#22223b] dark:bg-gray-200 text-white dark:text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
@@ -499,9 +468,8 @@ function Header() {
           </div>
         </div>
       </div>
-      <MobileHeader />
     </header>
   );
 }
 
-export default Header;
+export default DesktopHeader;
