@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import LongLogo from "../../assets/logo/long-logo.png";
 import House from "../../assets/logo/house.png";
 import Experiences from "../../assets/logo/Experience.png";
 import Services from "../../assets/logo/Services.png";
 import Host from "../../assets/logo/host.png";
-import { Search, Globe, Menu, CircleQuestionMark, Sun, Moon } from "lucide-react";
+import { Search, Globe, Menu, CircleQuestionMark, Sun, Moon, Filter, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.jsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog.jsx";
 
-function DesktopHeader({ isScrolled, activeTab, setActiveTab }) {
+function DesktopHeader({ activeTab, setActiveTab }) {
   const [selectedHostType, setSelectedHostType] = useState(null);
   const [openLanguageModal, setOpenLanguageModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
@@ -16,6 +16,13 @@ function DesktopHeader({ isScrolled, activeTab, setActiveTab }) {
   const [translateEnabled, setTranslateEnabled] = useState(true);
   const [activeLocaleTab, setActiveLocaleTab] = useState("language");
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [showFullHeader, setShowFullHeader] = useState(true);
+  const [searchPillWidth, setSearchPillWidth] = useState("auto");
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+  const searchRef = useRef(null);
+  const compactSearchRef = useRef(null);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -24,6 +31,66 @@ function DesktopHeader({ isScrolled, activeTab, setActiveTab }) {
       document.documentElement.classList.remove("dark");
     }
   }, [isDarkMode]);
+
+  // Airbnb-like scroll behavior with search pill transformation
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!ticking.current) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          
+          // At the top, show full header
+          if (currentScrollY < 50) {
+            setShowFullHeader(true);
+            setIsScrolled(false);
+          } 
+          // Scrolled down - hide full header, show sticky compact header
+          else if (currentScrollY > lastScrollY.current) {
+            setShowFullHeader(false);
+            setIsScrolled(true);
+          }
+          // Scrolling up - show sticky compact header
+          else {
+            setShowFullHeader(false);
+            setIsScrolled(true);
+          }
+          
+          lastScrollY.current = currentScrollY;
+          ticking.current = false;
+        });
+        
+        ticking.current = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Calculate and set search pill width for transformation
+  useEffect(() => {
+    const updateSearchPillWidth = () => {
+      if (searchRef.current && compactSearchRef.current) {
+        const fullWidth = searchRef.current.offsetWidth;
+        compactSearchRef.current.style.width = `${fullWidth}px`;
+        
+        // Store the width for transition
+        setSearchPillWidth(`${fullWidth}px`);
+      }
+    };
+
+    // Update on resize and initially
+    updateSearchPillWidth();
+    window.addEventListener('resize', updateSearchPillWidth);
+    
+    // Update after a small delay to ensure DOM is fully rendered
+    const timeoutId = setTimeout(updateSearchPillWidth, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateSearchPillWidth);
+      clearTimeout(timeoutId);
+    };
+  }, [showFullHeader]);
 
   const navItems = [
     { label: "Homes", icon: House },
@@ -114,360 +181,449 @@ function DesktopHeader({ isScrolled, activeTab, setActiveTab }) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 pt-6 pb-4 transition-all duration-300 border-b border-gray-200 dark:border-gray-800">
-      <div className="max-w-1440px mx-auto px-6">
-        <div className="flex items-center justify-between">
-          
-          {/* Logo */}
-          <div>
-            <img src={LongLogo} alt="Logo" className="h-8 w-auto" />
-          </div>
+    <>
+      {/* FULL HEADER - Only shows at the very top (0-50px scroll) */}
+      <header 
+        className={`sticky top-0 z-50 bg-white dark:bg-gray-900 transition-all duration-300 ease-out border-b border-gray-200 dark:border-gray-800 ${
+          showFullHeader ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="max-w-1440px mx-auto px-6">
+          {/* Top Row - Logo, Nav, User Menu */}
+          <div className="flex items-center justify-between py-4">
+            
+            {/* Logo */}
+            <div>
+              <img src={LongLogo} alt="Logo" className="h-8 w-auto" />
+            </div>
 
-          {/* Center Nav */}
-          <div className="flex items-center gap-8">
-            {navItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => setActiveTab(item.label)}
-                className="group relative flex items-center gap-2 pb-2 transition-all"
-              >
-                <div className="relative opacity-100">
-                  <img
-                    src={item.icon}
-                    alt=""
-                    className="h-10 w-10 object-contain group-hover:scale-125"
-                  />
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-6 bg-[#22223b] dark:bg-gray-200 text-white dark:text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-
-                <span
-                  className={`text-base Cerealnormal text-gray-800 dark:text-gray-200 transition-opacity duration-200 ${
-                    activeTab === item.label
-                      ? "opacity-100"
-                      : "opacity-50 group-hover:opacity-100"
-                  }`}
+            {/* Center Nav */}
+            <div className="flex items-center gap-8">
+              {navItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => setActiveTab(item.label)}
+                  className="group relative flex items-center gap-2 pb-2"
                 >
-                  {item.label}
-                </span>
+                  <div className="relative">
+                    <img
+                      src={item.icon}
+                      alt=""
+                      className="h-10 w-10 object-contain group-hover:scale-125 transition-transform duration-200"
+                    />
+                    {item.badge && (
+                      <span className="absolute -top-1 -right-6 bg-[#22223b] dark:bg-gray-200 text-white dark:text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
 
-                {activeTab === item.label && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.75 bg-black dark:bg-white rounded-full" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex justify-end items-center gap-2">
-            {/* Become a Host Dialog */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="text-sm font-semibold py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                  Become a host
-                </button>
-              </DialogTrigger>
-              
-              <DialogContent className="w-[90vw] max-w-5xl min-h-100 rounded-2xl p-8 md:p-12 bg-white dark:bg-gray-800">
-                <DialogHeader>
-                  <DialogTitle className="text-3xl font-semibold text-center text-gray-900 dark:text-gray-100">
-                    What would you like to host?
-                  </DialogTitle>
-                </DialogHeader>
-
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                  {hostOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setSelectedHostType(option.id)}
-                      className={`border-2 rounded-2xl p-8 md:p-10 flex flex-col items-center gap-4 hover:border-black dark:hover:border-white transition-all duration-200 ${
-                        selectedHostType === option.id 
-                          ? "border-black dark:border-white bg-gray-50 dark:bg-gray-700 shadow-md" 
-                          : "border-gray-200 dark:border-gray-600"
-                      }`}
-                    >
-                      <img 
-                        src={option.icon} 
-                        alt={option.label} 
-                        className="h-24 w-auto object-contain" 
-                      />
-                      
-                      <div className="text-center">
-                        <span className="text-lg font-medium text-gray-900 dark:text-gray-100">{option.label}</span>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{option.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-10 flex justify-end">
-                  <button
-                    onClick={() => {
-                      console.log("Selected:", selectedHostType);
-                    }}
-                    disabled={!selectedHostType}
-                    className={`px-8 py-3 rounded-lg transition-colors ${
-                      selectedHostType
-                        ? "bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  <span
+                    className={`text-base Cerealnormal text-gray-800 dark:text-gray-200 transition-opacity duration-200 ${
+                      activeTab === item.label
+                        ? "opacity-100"
+                        : "opacity-50 group-hover:opacity-100"
                     }`}
                   >
-                    Next
+                    {item.label}
+                  </span>
+
+                  {activeTab === item.label && (
+                    <div className="absolute bottom-0 left-0 w-full h-0.75 bg-black dark:bg-white rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Side Buttons */}
+            <div className="flex justify-end items-center gap-2">
+              {/* Become a Host Dialog */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="text-sm font-semibold py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                    Become a host
                   </button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                
+                <DialogContent className="w-[90vw] max-w-5xl min-h-100 rounded-2xl p-8 md:p-12 bg-white dark:bg-gray-800">
+                  <DialogHeader>
+                    <DialogTitle className="text-3xl font-semibold text-center text-gray-900 dark:text-gray-100">
+                      What would you like to host?
+                    </DialogTitle>
+                  </DialogHeader>
 
-            {/* Dark Mode Toggle */}
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)} 
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200" 
-              title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDarkMode ? (
-                <Sun className="h-4 w-4 text-gray-900 dark:text-gray-100" />
-              ) : (
-                <Moon className="h-4 w-4 text-gray-900 dark:text-gray-100" />
-              )}
-            </button>
+                  <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                    {hostOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => setSelectedHostType(option.id)}
+                        className={`border-2 rounded-2xl p-8 md:p-10 flex flex-col items-center gap-4 hover:border-black dark:hover:border-white transition-all duration-200 ${
+                          selectedHostType === option.id 
+                            ? "border-black dark:border-white bg-gray-50 dark:bg-gray-700 shadow-md" 
+                            : "border-gray-200 dark:border-gray-600"
+                        }`}
+                      >
+                        <img 
+                          src={option.icon} 
+                          alt={option.label} 
+                          className="h-24 w-auto object-contain" 
+                        />
+                        
+                        <div className="text-center">
+                          <span className="text-lg font-medium text-gray-900 dark:text-gray-100">{option.label}</span>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{option.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
 
-            {/* Globe Button */}
-            <button
-              onClick={() => setOpenLanguageModal(true)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-            >
-              <Globe size={18} className="text-gray-900 dark:text-gray-100" />
-            </button>
-
-            {/* Globe Dialog */}
-            <Dialog open={openLanguageModal} onOpenChange={setOpenLanguageModal}>
-              <DialogContent className="w-[95vw] max-w-5xl h-[85vh] p-0 rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-gray-800">
-                <div className="flex items-center gap-8 px-10 py-6 border-b border-gray-200 dark:border-gray-600">
-                  {localeTabs.map((tab) => (
+                  <div className="mt-10 flex justify-end">
                     <button
-                      key={tab.id}
-                      onClick={() => setActiveLocaleTab(tab.id)}
-                      className={`pb-2 text-[16px] font-medium border-b-2 transition-colors ${
-                        activeLocaleTab === tab.id
-                          ? "border-black dark:border-white text-gray-900 dark:text-gray-100"
-                          : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      onClick={() => {
+                        console.log("Selected:", selectedHostType);
+                      }}
+                      disabled={!selectedHostType}
+                      className={`px-8 py-3 rounded-lg transition-colors ${
+                        selectedHostType
+                          ? "bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      {tab.label}
+                      Next
                     </button>
-                  ))}
-                </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
-                <div className="p-10 overflow-y-auto h-[calc(85vh-5rem)]">
-                  {activeLocaleTab === "language" && (
-                    <>
-                      <div className="mb-10 flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            Translate descriptions and reviews to English
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Automatically translate content.
-                          </p>
+              {/* Dark Mode Toggle */}
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)} 
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" 
+                title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {isDarkMode ? (
+                  <Sun className="h-4 w-4 text-gray-900 dark:text-gray-100" />
+                ) : (
+                  <Moon className="h-4 w-4 text-gray-900 dark:text-gray-100" />
+                )}
+              </button>
+
+              {/* Globe Button */}
+              <button
+                onClick={() => setOpenLanguageModal(true)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Globe size={18} className="text-gray-900 dark:text-gray-100" />
+              </button>
+
+              {/* Globe Dialog */}
+              <Dialog open={openLanguageModal} onOpenChange={setOpenLanguageModal}>
+                <DialogContent className="w-[95vw] max-w-5xl h-[85vh] p-0 rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-gray-800">
+                  <div className="flex items-center gap-8 px-10 py-6 border-b border-gray-200 dark:border-gray-600">
+                    {localeTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveLocaleTab(tab.id)}
+                        className={`pb-2 text-[16px] font-medium border-b-2 transition-colors ${
+                          activeLocaleTab === tab.id
+                            ? "border-black dark:border-white text-gray-900 dark:text-gray-100"
+                            : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="p-10 overflow-y-auto h-[calc(85vh-5rem)]">
+                    {activeLocaleTab === "language" && (
+                      <>
+                        <div className="mb-10 flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                              Translate descriptions and reviews to English
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Automatically translate content.
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={() => setTranslateEnabled(!translateEnabled)}
+                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
+                              translateEnabled ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-600"
+                            }`}
+                            aria-label={translateEnabled ? "Disable translation" : "Enable translation"}
+                            role="switch"
+                            aria-checked={translateEnabled}
+                          >
+                            <span
+                              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
+                                translateEnabled ? "translate-x-8" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
                         </div>
 
-                        <button
-                          onClick={() => setTranslateEnabled(!translateEnabled)}
-                          className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
-                            translateEnabled ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-600"
-                          }`}
-                          aria-label={translateEnabled ? "Disable translation" : "Enable translation"}
-                          role="switch"
-                          aria-checked={translateEnabled}
-                        >
-                          <span
-                            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
-                              translateEnabled ? "translate-x-8" : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
+                          Suggested languages and regions
+                        </h3>
 
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Suggested languages and regions
-                      </h3>
-
-                      <div className="grid grid-cols-3 gap-4 mb-10">
-                        {suggestedLanguages.map((item) => (
-                          <button
-                            key={`${item.language}-${item.region}`}
-                            onClick={() => {
-                              setSelectedLanguage(item.language);
-                              setOpenLanguageModal(false);
-                            }}
-                            className="p-4 rounded-xl border hover:border-black dark:hover:border-white text-left transition-colors"
-                          >
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{item.language}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{item.region}</p>
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        {languages.map((item) => (
-                          <button
-                            key={`${item.language}-${item.region}`}
-                            onClick={() => {
-                              setSelectedLanguage(item.language);
-                              setOpenLanguageModal(false);
-                            }}
-                            className="p-4 rounded-xl border hover:border-black dark:hover:border-white text-left flex justify-between transition-colors"
-                          >
-                            <div>
+                        <div className="grid grid-cols-3 gap-4 mb-10">
+                          {suggestedLanguages.map((item) => (
+                            <button
+                              key={`${item.language}-${item.region}`}
+                              onClick={() => {
+                                setSelectedLanguage(item.language);
+                                setOpenLanguageModal(false);
+                              }}
+                              className="p-4 rounded-xl border hover:border-black dark:hover:border-white text-left transition-colors"
+                            >
                               <p className="font-medium text-gray-900 dark:text-gray-100">{item.language}</p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">{item.region}</p>
-                            </div>
+                            </button>
+                          ))}
+                        </div>
 
-                            {selectedLanguage === item.language && (
-                              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                                <path
-                                  d="M5 13l4 4L19 7"
-                                  stroke="currentColor"
-                                  strokeWidth="3"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-black dark:text-white"
-                                />
-                              </svg>
-                            )}
-                          </button>
-                        ))}
+                        <div className="grid grid-cols-2 gap-4">
+                          {languages.map((item) => (
+                            <button
+                              key={`${item.language}-${item.region}`}
+                              onClick={() => {
+                                setSelectedLanguage(item.language);
+                                setOpenLanguageModal(false);
+                              }}
+                              className="p-4 rounded-xl border hover:border-black dark:hover:border-white text-left flex justify-between transition-colors"
+                            >
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-gray-100">{item.language}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{item.region}</p>
+                              </div>
+
+                              {selectedLanguage === item.language && (
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                                  <path
+                                    d="M5 13l4 4L19 7"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-black dark:text-white"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {activeLocaleTab === "currency" && (
+                      <>
+                        <h2 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">
+                          Choose a currency
+                        </h2>
+
+                        <div className="grid grid-cols-3 gap-4">
+                          {currencies.map((currency) => (
+                            <button
+                              key={`${currency.code}-${currency.name}`}
+                              onClick={() =>
+                                setSelectedCurrency(`${currency.code} - ${currency.symbol}`)
+                              }
+                              className={`p-4 rounded-xl border text-left transition-all ${
+                                selectedCurrency === `${currency.code} - ${currency.symbol}`
+                                  ? "border-black dark:border-white bg-gray-50 dark:bg-gray-700"
+                                  : "border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-400"
+                              }`}
+                            >
+                              <p className="font-medium text-gray-900 dark:text-gray-100">{currency.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {currency.code} – {currency.symbol}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Open menu"
+                    className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full cursor-pointer focus-visible:outline-none transition-colors"
+                  >
+                    <Menu className="h-5 w-5 text-gray-900 dark:text-gray-100" />
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" sideOffset={8} className="w-64 z-50 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <DropdownMenuItem className="py-3 text-gray-900 dark:text-gray-100">
+                    <CircleQuestionMark className="mr-2 h-4 w-4" />Help Center
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Become a host</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">It's easy to start hosting and earn extra income.</p>
                       </div>
-                    </>
-                  )}
-
-                  {activeLocaleTab === "currency" && (
-                    <>
-                      <h2 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">
-                        Choose a currency
-                      </h2>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        {currencies.map((currency) => (
-                          <button
-                            key={`${currency.code}-${currency.name}`}
-                            onClick={() =>
-                              setSelectedCurrency(`${currency.code} - ${currency.symbol}`)
-                            }
-                            className={`p-4 rounded-xl border text-left transition-all ${
-                              selectedCurrency === `${currency.code} - ${currency.symbol}`
-                                ? "border-black dark:border-white bg-gray-50 dark:bg-gray-700"
-                                : "border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-400"
-                            }`}
-                          >
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{currency.name}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {currency.code} – {currency.symbol}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Open menu"
-                  className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full cursor-pointer focus-visible:outline-none transition-colors"
-                >
-                  <Menu className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align="end" sideOffset={8} className="w-64 z-50 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <DropdownMenuItem className="py-3 text-gray-900 dark:text-gray-100">
-                  <CircleQuestionMark className="mr-2 h-4 w-4" />Help Center
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Become a host</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">It's easy to start hosting and earn extra income.</p>
+                      <img src={Host} alt="Host" className="w-10 h-10 object-contain" />
                     </div>
-                    <img src={Host} alt="Host" className="w-10 h-10 object-contain" />
-                  </div>
-                </DropdownMenuItem>
+                  </DropdownMenuItem>
 
-                <DropdownMenuSeparator />
+                  <DropdownMenuSeparator />
 
-                <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-900 dark:text-gray-100">Refer a Host</span>
-                  </div>
-                </DropdownMenuItem>
+                  <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-900 dark:text-gray-100">Refer a Host</span>
+                    </div>
+                  </DropdownMenuItem>
 
-                <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-900 dark:text-gray-100">Find a co-host</span>
-                  </div>
-                </DropdownMenuItem>
+                  <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-900 dark:text-gray-100">Find a co-host</span>
+                    </div>
+                  </DropdownMenuItem>
 
-                <DropdownMenuSeparator />
+                  <DropdownMenuSeparator />
 
-                <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-900 dark:text-gray-100">Log in or sign up</span>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem className="py-3 focus:bg-gray-100 dark:focus:bg-gray-700">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-900 dark:text-gray-100">Log in or sign up</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* SEARCH BAR ROW */}
+          <div className="pb-4">
+            <div className="flex justify-center">
+              {/* Large Search Bar - Shows at top - Add ref for width measurement */}
+              <div 
+                ref={searchRef}
+                className="flex items-center w-full max-w-212.5 border border-gray-300 dark:border-gray-600 rounded-full shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800 h-16"
+              >
+                
+                {searchOptions.map((option, index) => (
+                  <React.Fragment key={option.key}>
+                    {index > 0 && <div className="h-8 w-px bg-gray-300 dark:bg-gray-600" />}
+                    
+                    <button 
+                      className={`flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-left h-full transition-colors flex-1 ${
+                        option.key === "who" ? 'pr-3' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                          {option.title}
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {option.subtitle}
+                        </span>
+                      </div>
+                      
+                      {option.key === "who" && (
+                        <div className="flex items-center gap-3">
+                          <div className="hidden sm:flex items-center gap-2 bg-[#ff385c] text-white px-4 py-2.5 rounded-full hover:bg-[#e31c5f] transition-colors">
+                            <Search className="h-4 w-4" />
+                            <span className="font-semibold text-sm">Search</span>
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* SEARCH BAR ROW */}
-        <div
-          className={`mt-4 flex justify-center transition-all duration-300 ${
-            isScrolled
-              ? "scale-90 opacity-0 h-0 overflow-hidden"
-              : "scale-100 opacity-100"
-          }`}
-        >
-          <div className="flex items-center w-full max-w-212.5 border border-gray-200 dark:border-gray-600 rounded-full shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 h-16.5">
-            
-            {searchOptions.map((option, index) => (
-              <React.Fragment key={option.key}>
-                {index > 0 && <div className="h-8 w-px bg-gray-200 dark:bg-gray-600" />}
-                
-                <button 
-                  className={`flex items-center justify-between px-8 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-left h-full transition-colors ${
-                    option.key === "who" ? "flex-[1.2]" : "flex-1"
-                  }`}
-                >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                      {option.title}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {option.subtitle}
-                    </span>
-                  </div>
-                  
-                  {option.key === "who" && (
-                    <div className="bg-[#ff385c] p-4 rounded-full text-white transition-all hover:bg-[#e31c5f]">
-                      <Search className="h-5 w-5 stroke-[3px]" />
+      {/* STICKY COMPACT HEADER - Shows when scrolled */}
+      <div 
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-out ${
+          isScrolled ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}
+        style={{ 
+          backdropFilter: 'blur(10px)', 
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          borderBottom: '1px solid rgba(229, 231, 235, 0.5)'
+        }}
+      >
+        <div className="max-w-1440px mx-auto px-6">
+          <div className="flex items-center justify-between py-3">
+            {/* Left: Logo only */}
+            <div>
+              <img src={LongLogo} alt="Logo" className="h-7 w-auto" />
+            </div>
+
+            {/* Center: Search Pill */}
+            <div className="flex-1 flex justify-center px-4">
+              <div 
+                ref={compactSearchRef}
+                className="transition-all duration-300 ease-out"
+                style={{ 
+                  width: searchPillWidth,
+                  maxWidth: '212.5px'
+                }}
+              >
+                <div className="flex items-center bg-white border border-gray-300 rounded-full shadow-md h-14 px-4 py-2 hover:shadow-lg transition-shadow duration-200 w-full">
+                  <button className="flex items-center justify-between w-full px-4">
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-gray-900 text-sm truncate">
+                        Anywhere
+                      </div>
                     </div>
-                  )}
-                </button>
-              </React.Fragment>
-            ))}
+                    
+                    <div className="h-6 w-px bg-gray-300 mx-4" />
+                    
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-gray-900 text-sm truncate">
+                        Any week
+                      </div>
+                    </div>
+                    
+                    <div className="h-6 w-px bg-gray-300 mx-4" />
+                    
+                    <div className="text-left flex-1 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-900 text-sm truncate">
+                          Add guests
+                        </div>
+                      </div>
+                      
+                      <div className="bg-[#ff385c] p-2.5 rounded-full text-white ml-4">
+                        <Search className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Simple menu */}
+            <div className="flex items-center gap-3">
+              <button className="text-sm font-semibold py-2.5 px-4 hover:bg-gray-100 rounded-full transition-colors">
+                Become a host
+              </button>
+              
+              <button className="flex items-center gap-1 p-2.5 hover:bg-gray-100 rounded-full transition-colors border border-gray-300">
+                <Menu className="h-4 w-4 text-gray-900" />
+                <User className="h-4 w-4 text-gray-900" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </header>
+    </>
   );
 }
 
