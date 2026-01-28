@@ -1,4 +1,3 @@
-// DesktopHeader.jsx
 import React, { useState, useEffect } from "react";
 import LongLogo from "../../assets/logo/long-logo.png";
 import House from "../../assets/logo/house.png";

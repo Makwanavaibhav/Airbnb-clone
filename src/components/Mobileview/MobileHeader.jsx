@@ -1,4 +1,3 @@
-// Mobileview/MobileHeader.jsx
 import React, { useState, useEffect } from "react";
 import House from "../../assets/logo/house.png";
 import Experiences from "../../assets/logo/Experience.png";
@@ -88,7 +87,6 @@ function MobileHeader({
                 )}
               </div>
 
-              {/* Always visible text */}
               <div className="flex items-center gap-1">
                 <span
                   className={`text-[13px] font-medium transition-colors duration-200 ${

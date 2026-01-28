@@ -1,4 +1,3 @@
-// Header.jsx
 import React, { useState, useEffect } from "react";
 import DesktopHeader from "./DesktopHeader";
 import MobileHeader from "../Mobileview/MobileHeader";
@@ -17,10 +16,8 @@ function Header() {
       setIsMobile(window.innerWidth < 768);
     };
 
-    // Initial check
-    checkMobile();
+      checkMobile();
     
-    // Add listeners
     window.addEventListener("scroll", handleScroll);
     window.addEventListener("resize", checkMobile);
 
@@ -30,7 +27,6 @@ function Header() {
     };
   }, []);
 
-  // Render only one header based on screen size
   if (isMobile) {
     return (
       <MobileHeader 
