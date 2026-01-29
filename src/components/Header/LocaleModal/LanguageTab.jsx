@@ -1,4 +1,3 @@
-// components/Header/components/LocaleModal/LanguageTab.jsx
 import React from "react";
 
 function LanguageTab({

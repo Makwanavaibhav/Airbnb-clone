@@ -1,12 +1,18 @@
 import React from "react";
 import { BsHeartFill, BsHeart } from "react-icons/bs";
 import { FiMapPin, FiStar } from "react-icons/fi";
-import hotel from "../../assets/hotels/hotel-1.jpeg";
-import hotel2 from "../../assets/hotels/hotel-2.jpeg";
-import hotel3 from "../../assets/hotels/hotel-3.jpeg";
-import hotel4 from "../../assets/hotels/hotel-4.jpeg";
-import hotel5 from "../../assets/hotels/hotel-5.jpeg";
-import hotel6 from "../../assets/hotels/Hotel-6.jpeg";
+import Uhotel from "../../assets/hotels/hotel-1.jpeg";
+import Uhotel2 from "../../assets/hotels/hotel-2.jpeg";
+import Uhotel3 from "../../assets/hotels/hotel-3.jpeg";
+import Uhotel4 from "../../assets/hotels/hotel-4.jpeg";
+import Uhotel5 from "../../assets/hotels/hotel-5.jpeg";
+import Uhotel6 from "../../assets/hotels/Hotel-6.jpeg";
+import Uhotel7 from "../../assets/hotels/Hotel-7.jpeg";
+import goaHotel1 from "../../assets/hotels/Hotel-8.jpeg";
+import goaHotel2 from "../../assets/hotels/hotel-9.jpeg";
+import goaHotel3 from "../../assets/hotels/hotel-10.jpeg";
+import goaHotel4 from "../../assets/hotels/hotel-11.jpeg";
+import goaHotel5 from "../../assets/hotels/Hotel-12.jpeg";
 
 function HotelCard({ image, details, index }) {
   const [isFavorite, setIsFavorite] = React.useState(false);
@@ -70,31 +76,69 @@ function HotelCard({ image, details, index }) {
 }
 
 function Card() {
-  const hotelImages = [hotel, hotel2, hotel3, hotel4, hotel5, hotel6];
+  // Udaipur Hotels
+  const udaipurHotelImages = [Uhotel, Uhotel2, Uhotel3, Uhotel4, Uhotel5, Uhotel6, Uhotel7];
   
-  const hotelDetails = [
+  const udaipurHotelDetails = [
     { title: "Apartment in Udaipur", location: "Udaipur", price: "₹6,207", period: "2 nights", rating: "4.8" },
     { title: "Room in Udaipur", location: "Udaipur", price: "₹7,989", period: "2 nights", rating: "4.9" },
     { title: "Home in Udaipur", location: "Udaipur", price: "₹8,673", period: "4 nights", rating: "5.0" },
     { title: "Room in Udaipur", location: "Udaipur", price: "₹6,000", period: "3 nights", rating: "4.8" },
     { title: "Room in Pichola", location: "Pichola", price: "₹5,000", period: "2 nights", rating: "4.9" },
     { title: "Home in pichola", location: "Pichola", price: "₹3,000", period: "2 nights", rating: "4.4" },
+    { title: "Place to stay in pichola", location: "Pichola", price: "₹4,600", period: "3 nights", rating: "4.7" },
+  ];
+
+  // Goa Hotels 
+  const goaHotelImages = [goaHotel1, goaHotel2, goaHotel3, goaHotel4, goaHotel5];
+  
+  const goaHotelDetails = [
+    { title: "Beach Villa in Goa", location: "North Goa", price: "₹9,500", period: "2 nights", rating: "4.9" },
+    { title: "Sea View Apartment", location: "Calangute", price: "₹7,200", period: "3 nights", rating: "4.7" },
+    { title: "Luxury Resort", location: "Baga", price: "₹12,000", period: "2 nights", rating: "4.8" },
+    { title: "Budget Stay", location: "Anjuna", price: "₹3,500", period: "2 nights", rating: "4.5" },
+    { title: "Penthouse in Goa", location: "Panjim", price: "₹15,000", period: "3 nights", rating: "5.0" },
   ];
 
   return (
-    <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
-      {hotelImages.map((image, index) => {
-        const details = hotelDetails[index] || hotelDetails[0];
-        
-        return (
-          <HotelCard
-            key={`hotel-${index}`}
-            image={image}
-            details={details}
-            index={index}
-          />
-        );
-      })}
+    <div>
+      {/* Udaipur Hotels Section */}
+      <div className="mb-10">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Popular in Udaipur</h2>
+        <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
+          {udaipurHotelImages.map((image, index) => {
+            const details = udaipurHotelDetails[index] || udaipurHotelDetails[0];
+            
+            return (
+              <HotelCard
+                key={`udaipur-hotel-${index}`}
+                image={image}
+                details={details}
+                index={index}
+              />
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Goa Hotels Section */}
+      <div className="mb-10">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Top Picks in Goa</h2>
+        <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
+          {goaHotelImages.map((image, index) => {
+            const details = goaHotelDetails[index] || goaHotelDetails[0];
+            
+            return (
+              <HotelCard
+                key={`goa-hotel-${index}`}
+                image={image}
+                details={details}
+                index={index}
+              />
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

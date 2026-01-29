@@ -1,4 +1,3 @@
-// components/Header/components/LocaleModal/CurrencyTab.jsx
 import React from "react";
 
 function CurrencyTab({ currencies, selectedCurrency, setSelectedCurrency }) {

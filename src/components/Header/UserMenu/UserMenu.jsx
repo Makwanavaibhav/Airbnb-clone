@@ -1,4 +1,3 @@
-// components/Header/components/UserMenu/UserMenu.jsx
 import React from "react";
 import { Menu, CircleQuestionMark, User as UserIcon } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../ui/dropdown-menu.jsx";

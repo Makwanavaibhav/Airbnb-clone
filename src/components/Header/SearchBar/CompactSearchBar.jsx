@@ -1,6 +1,6 @@
-// components/Header/components/SearchBar/CompactSearchBar.jsx
 import React from "react";
 import { Search } from "lucide-react";
+import houseLogo from "../../../assets/logo/house.png";
 
 function CompactSearchBar({ compactSearchRef, searchPillWidth }) {
   return (
@@ -9,40 +9,42 @@ function CompactSearchBar({ compactSearchRef, searchPillWidth }) {
       className="transition-all duration-300 ease-out"
       style={{ 
         width: searchPillWidth,
-        maxWidth: '212.5px'
+        maxWidth: '400px'
       }}
     >
-      <div className="flex items-center bg-white border border-gray-300 rounded-full shadow-md h-14 px-4 py-2 hover:shadow-lg transition-shadow duration-200 w-full">
-        <button className="flex items-center justify-between w-full px-4">
-          <div className="text-left flex-1">
-            <div className="font-semibold text-gray-900 text-sm truncate">
-              Anywhere
-            </div>
+      <button className="flex items-center bg-white dark:bg-gray-800 rounded-full shadow-lg h-16 hover:shadow-xl transition-all duration-200 w-full border border-gray-200 dark:border-gray-700 overflow-hidden">
+        
+        {/* First section - Anywhere */}
+        <div className="flex items-center justify-center flex-1 py-3 px-4 border-r border-gray-200 dark:border-gray-700 min-w-0">
+          <img 
+            src={houseLogo} 
+            alt="House logo" 
+            className="h-8 w-8 object-contain shrink-0 mr-3"
+          />
+          <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm text-center">
+            Anywhere
+          </div>
+        </div>
+        
+        {/* Second section - Anytime */}
+        <div className="flex items-center justify-center flex-1 py-3 px-4 border-r border-gray-200 dark:border-gray-700">
+          <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm text-center">
+            Anytime
+          </div>
+        </div>
+        
+        {/* Third section - Add guests with search button */}
+        <div className="flex items-center justify-between flex-1 py-3 px-4">
+          <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
+            Add guests
           </div>
           
-          <div className="h-6 w-px bg-gray-300 mx-4" />
-          
-          <div className="text-left flex-1">
-            <div className="font-semibold text-gray-900 text-sm truncate">
-              Any week
-            </div>
+          <div className="bg-airbnb p-3 rounded-full text-white hover:bg-red-600 transition-colors ml-4 shrink-0">
+            <Search className="h-4 w-4" strokeWidth={3} />
           </div>
-          
-          <div className="h-6 w-px bg-gray-300 mx-4" />
-          
-          <div className="text-left flex-1 flex items-center justify-between">
-            <div>
-              <div className="font-semibold text-gray-900 text-sm truncate">
-                Add guests
-              </div>
-            </div>
-            
-            <div className="bg-[#ff385c] p-2.5 rounded-full text-white ml-4">
-              <Search className="h-4 w-4" />
-            </div>
-          </div>
-        </button>
-      </div>
+        </div>
+        
+      </button>
     </div>
   );
 }

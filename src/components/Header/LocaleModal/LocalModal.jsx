@@ -1,4 +1,3 @@
-// components/Header/components/LocaleModal/LocaleModal.jsx
 import React from "react";
 import { Dialog, DialogContent } from "../../ui/dialog.jsx";
 import LanguageTab from "../LocaleModal/LanguageTab.jsx";

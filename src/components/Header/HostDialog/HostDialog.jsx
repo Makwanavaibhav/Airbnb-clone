@@ -1,4 +1,3 @@
-// components/Header/components/HostDialog/HostDialog.jsx
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../ui/dialog.jsx";
 import House from "../../../assets/logo/house.png";

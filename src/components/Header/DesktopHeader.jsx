@@ -1,4 +1,3 @@
-// components/Header/DesktopHeader.jsx
 import React, { useState, useEffect, useRef } from "react";
 import LongLogo from "../../assets/logo/long-logo.png";
 import { Globe, Menu, User } from "lucide-react";
@@ -87,69 +86,60 @@ function DesktopHeader({ activeTab, setActiveTab }) {
 
   return (
     <>
-      <header 
-        className={`sticky top-0 z-50 bg-white dark:bg-gray-900 transition-all duration-300 ease-out border-b border-gray-200 dark:border-gray-800 ${
-          showFullHeader ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="relative px-6 mx-auto max-w-screen-2x1">
-          <div className="flex justify-between py-4">
-            
-            <div>
-              <img src={LongLogo} alt="Airbnb" className="h-8 w-auto" />
-            </div>
-
-            <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
-
-            <div className="flex justify-end items-center gap-2">
-              <HostDialog 
-                selectedHostType={selectedHostType}
-                setSelectedHostType={setSelectedHostType}
-              />
-
-              <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
-
-              <button
-                onClick={() => setOpenLanguageModal(true)}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Globe size={18} className="text-gray-900 dark:text-gray-100" />
-              </button>
-
-              <UserMenu />
-            </div>
+      {/* Main fixed header */}
+      <div className="fixed top-2 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+        {/* Top row with logo, center content, and right buttons */}
+        <div className="flex items-center justify-between px-8 h-16 dark:bg-gray-900">
+          {/* Logo on left - Always visible */}
+          <div className="shrink-0">
+            <img src={LongLogo} alt="Airbnb" className="h-8 w-auto" />
           </div>
 
-          <div className="pb-4">
-            <div className="flex justify-center">
-              <SearchBar activeTab={activeTab} searchRef={searchRef} />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div 
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-out ${
-          isScrolled ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
-        }`}
-        style={{ 
-          backdropFilter: 'blur(10px)', 
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          borderBottom: '1px solid rgba(229, 231, 235, 0.5)'
-        }}
-      >
-        <div className="max-w-1440px mx-auto px-6">
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <img src={LongLogo} alt="Logo" className="h-7 w-auto" />
-            </div>
-
-            <div className="flex-1 flex justify-center px-4">
+          {/* Center area - Shows either NavItems OR CompactSearchBar */}
+          <div className="flex-1 mx-8 flex justify-center items-center">
+            {isScrolled ? (
               <CompactSearchBar 
                 compactSearchRef={compactSearchRef}
                 searchPillWidth={searchPillWidth}
               />
-            </div>
+            ) : (
+              <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
+            )}
+          </div>
+
+          {/* Right side buttons - Always visible */}
+          <div className="flex items-center gap-4 shrink-0">
+            <HostDialog 
+              selectedHostType={selectedHostType}
+              setSelectedHostType={setSelectedHostType}
+            />
+            <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+            <button
+              onClick={() => setOpenLanguageModal(true)}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Globe size={18} className="text-gray-900 dark:text-gray-100" />
+            </button>
+            <UserMenu />
+          </div>
+        </div>
+      </div>
+
+      {/* Spacer for fixed header */}
+      <div className="h-16"></div>
+
+      {/* Full Search Bar - Below header (hides when scrolled) */}
+      <div 
+        ref={searchRef}
+        className={`sticky top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
+          isScrolled 
+            ? '-translate-y-full opacity-0 pointer-events-none' 
+            : 'translate-y-0 opacity-100'
+        }`}
+      >
+        <div className="px-8 py-6">
+          <div className="flex justify-center">
+            <SearchBar activeTab={activeTab} />
           </div>
         </div>
       </div>

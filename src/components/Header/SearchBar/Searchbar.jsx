@@ -1,4 +1,3 @@
-// components/Header/components/SearchBar/SearchBar.jsx
 import React from "react";
 import { Search } from "lucide-react";
 
@@ -38,9 +37,8 @@ function SearchBar({ activeTab, searchRef }) {
             
             {option.key === "who" && (
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 bg-[#ff385c] text-white px-4 py-2.5 rounded-full hover:bg-[#e31c5f] transition-colors">
+                <div className="hidden sm:flex items-center justify-center bg-[#ff385c] text-white w-10 h-10 rounded-full hover:bg-[#e31c5f] transition-colors">
                   <Search className="h-4 w-4" />
-                  <span className="font-semibold text-sm">Search</span>
                 </div>
               </div>
             )}

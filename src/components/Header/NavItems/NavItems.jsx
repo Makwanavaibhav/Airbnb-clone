@@ -1,4 +1,3 @@
-// components/Header/components/NavItems/NavItems.jsx
 import React from "react";
 import house from "../../../assets/logo/house.png";
 import Experiences from "../../../assets/logo/Experience.png";

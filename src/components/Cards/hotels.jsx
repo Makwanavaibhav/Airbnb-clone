@@ -6,7 +6,6 @@ function Cards() {
     <div className="w-full px-6 py-8">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-2xl font-semibold text-gray-900">Popular homes in Udaipur &gt;</p>
       </div>
       
       <Card />
