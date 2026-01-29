@@ -92,11 +92,11 @@ function DesktopHeader({ activeTab, setActiveTab }) {
           showFullHeader ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         }`}
       >
-        <div className="max-w-1440px mx-auto px-6">
+        <div className="relative px-6 mx-auto max-w-screen-2x1">
           <div className="flex justify-between py-4">
             
             <div>
-              <img src={LongLogo} alt="Logo" className="h-8 w-auto" />
+              <img src={LongLogo} alt="Airbnb" className="h-8 w-auto" />
             </div>
 
             <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -149,17 +149,6 @@ function DesktopHeader({ activeTab, setActiveTab }) {
                 compactSearchRef={compactSearchRef}
                 searchPillWidth={searchPillWidth}
               />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button className="text-sm font-semibold py-2.5 px-4 hover:bg-gray-100 rounded-full transition-colors">
-                Become a host
-              </button>
-              
-              <button className="flex items-center gap-1 p-2.5 hover:bg-gray-100 rounded-full transition-colors border border-gray-300">
-                <Menu className="h-4 w-4 text-gray-900" />
-                <User className="h-4 w-4 text-gray-900" />
-              </button>
             </div>
           </div>
         </div>

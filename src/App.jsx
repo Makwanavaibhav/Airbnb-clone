@@ -1,4 +1,4 @@
-import Cards from "./components/Cards/hotels.jsx";
+import Cards from "../src/components/Cards/hotels.jsx";
 import Header from "./components/Header/Header.jsx";
 import { useState } from "react";
 

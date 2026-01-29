@@ -12,7 +12,7 @@ function NavItems({ activeTab, setActiveTab }) {
   ];
 
   return (
-    <div className="flex items-center gap-8">
+    <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-12">
       {navItems.map((item) => (
         <button
           key={item.label}
@@ -23,7 +23,7 @@ function NavItems({ activeTab, setActiveTab }) {
             <img
               src={item.icon}
               alt=""
-              className="h-10 w-10 object-contain group-hover:scale-125 transition-transform duration-200"
+              className="h-12 w-12 object-contain group-hover:scale-125 transition-transform duration-200"
             />
             {item.badge && (
               <span className="absolute -top-1 -right-6 bg-[#22223b] dark:bg-gray-200 text-white dark:text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
