@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import DesktopHeader from "./DesktopHeader";
-import MobileHeader from "../Mobileview/MobileHeader";
+import DesktopHeader from "../Header/DesktopHeader.jsx";
+import MobileHeader from "../Mobileview/MobileHeader.jsx";
 
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);

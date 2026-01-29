@@ -175,7 +175,7 @@ function MapTileLayer({
                 attribution: resolvedAttribution,
             })
         }
-    }, [context, name, url, attribution])
+    }, [context, name, url, attribution, darkUrl, darkAttribution, resolvedUrl, resolvedAttribution])
 
     if (context && context.selectedTileLayer !== name) {
         return null
