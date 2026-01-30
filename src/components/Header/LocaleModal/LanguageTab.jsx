@@ -24,7 +24,7 @@ function LanguageTab({
         <button
           onClick={() => setTranslateEnabled(!translateEnabled)}
           className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
-            translateEnabled ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-600"
+            translateEnabled ? "bg-black dark:bg-black" : "bg-gray-300 dark:bg-gray-500"
           }`}
           aria-label={translateEnabled ? "Disable translation" : "Enable translation"}
           role="switch"

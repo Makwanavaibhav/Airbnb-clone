@@ -2,67 +2,168 @@ import React from "react";
 
 function Footer() {
   return (
-    <footer className="bg-gray-900 text-white py-12 px-6 md:px-12 lg:px-24">
-      <div className="max-w-7xl mx-auto">
-        {/* Top Links Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+    <footer className="bg-white dark:bg-gray-900 text-black dark:text-white">
+      <div className="px-6 py-12  lg:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-50 mb-12">
           {/* Col 1: Support */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide mb-4">Support</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Help Centre</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Get help with a safety issue</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">AirCover</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Anti-discrimination</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Disability support</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Cancellation options</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Report neighbourhood concern</a></li>
+            <h3 className="text-xs font-semibold tracking-wider mb-4 text-black dark:text-gray-400">
+              Support
+            </h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Help Centre
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Get help with a safety issue
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  AirCover
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Anti-discrimination
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Disability support
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Cancellation options
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Report neighbourhood concern
+                </a>
+              </li>
             </ul>
           </div>
 
           {/* Col 2: Hosting */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide mb-4">Hosting</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Airbnb your home</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Airbnb your experience</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Airbnb your service</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">AirCover for Hosts</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Hosting resources</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Community forum</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Hosting responsibly</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Join a free hosting class</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Find a co-host</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Refer a host</a></li>
+            <h3 className="text-xs font-semibold tracking-wider mb-4 text-black dark:text-gray-400">
+              Hosting
+            </h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Airbnb your home
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Airbnb your experience
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Airbnb your service
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  AirCover for Hosts
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Hosting resources
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Community forum
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Hosting responsibly
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Join a free hosting class
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Find a co-host
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Refer a host
+                </a>
+              </li>
             </ul>
           </div>
 
           {/* Col 3: Airbnb */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide mb-4">Airbnb</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-gray-300 transition-colors">2025 Summer Release</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Newsroom</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Investors</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition-colors">Airbnb.org emergency stays</a></li>
+            <h3 className="text-xs font-semibold tracking-wider mb-4 text-black dark:text-gray-400">
+              Airbnb
+            </h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  2025 Summer Release
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Newsroom
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Careers
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Investors
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline text-gray-800 dark:text-gray-300">
+                  Airbnb.org emergency stays
+                </a>
+              </li>
             </ul>
           </div>
 
-          {/* Empty column for spacing */}
+          {/* Empty 4th column for spacing - Airbnb leaves this empty */}
           <div></div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-start md:items-center text-sm space-y-4 md:space-y-0">
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <span>&copy; 2026 Airbnb, Inc.</span>
-            <span>·</span>
-            <a href="#" className="hover:text-gray-300">Privacy</a>
-            <span>·</span>
-            <a href="#" className="hover:text-gray-300">Terms</a>
-            <span>·</span>
-            <a href="#" className="hover:text-gray-300">Company details</a>
+        {/* Bottom separator and copyright */}
+        <div className="border-t border-gray-300 dark:border-gray-700 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <span>© 2026 Airbnb, Inc.</span>
+              <span className="mx-2">·</span>
+              <a href="#" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+                Privacy
+              </a>
+              <span className="mx-2">·</span>
+              <a href="#" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+                Terms
+              </a>
+              <span className="mx-2">·</span>
+              <a href="#" className="hover:underline hover:text-gray-800 dark:hover:text-gray-200">
+                Company details
+              </a>
+            </div>
           </div>
         </div>
       </div>

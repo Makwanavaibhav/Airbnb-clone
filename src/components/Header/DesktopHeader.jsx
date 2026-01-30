@@ -86,7 +86,8 @@ function DesktopHeader({ activeTab, setActiveTab }) {
 
   return (
     <>
-      <div className="fixed py-2 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+      {/* Fixed Header - Updated borders */}
+      <div className="fixed py-2 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm dark:bg-gray-900/95 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between px-8 h-16 dark:bg-gray-900">
           <div className="shrink-0">
             <img src={LongLogo} alt="Airbnb" className="h-8 w-auto" />
@@ -115,7 +116,7 @@ function DesktopHeader({ activeTab, setActiveTab }) {
             <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
             <button
               onClick={() => setOpenLanguageModal(true)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent dark:border-gray-700"
             >
               <Globe size={18} className="text-gray-900 dark:text-gray-100" />
             </button>
@@ -124,7 +125,10 @@ function DesktopHeader({ activeTab, setActiveTab }) {
         </div>
       </div>
 
+      {/* Spacer for fixed header */}
       <div className="h-16"></div>
+      
+      {/* Search Section - Updated borders */}
       <div 
         ref={searchRef}
         className={`sticky top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
