@@ -6,7 +6,7 @@ function CompactSearchBar({ compactSearchRef, searchPillWidth }) {
   return (
     <div 
       ref={compactSearchRef}
-      className="transition-all duration-300 ease-out"
+      className="transition-all duration-300 ease-out absolute left-1/3"
       style={{ 
         width: searchPillWidth,
         maxWidth: '400px'

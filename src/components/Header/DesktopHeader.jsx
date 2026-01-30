@@ -109,10 +109,13 @@ function DesktopHeader({ activeTab, setActiveTab }) {
 
           {/* Right side buttons - Always visible */}
           <div className="flex items-center gap-4 shrink-0">
-            <HostDialog 
-              selectedHostType={selectedHostType}
-              setSelectedHostType={setSelectedHostType}
-            />
+            {/* Hide HostDialog on screens less than 900px */}
+            <div className="hidden min-[1150px]:block">
+              <HostDialog 
+                selectedHostType={selectedHostType}
+                setSelectedHostType={setSelectedHostType}
+              />
+            </div>
             <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
             <button
               onClick={() => setOpenLanguageModal(true)}
