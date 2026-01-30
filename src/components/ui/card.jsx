@@ -35,49 +35,40 @@ function HotelCard({ image, details, index }) {
 
   return (
     <div 
-      className="relative shrink-0 w-60 h-70 overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group cursor-pointer"
-    >
-      {/* Background Image */}
+      className="relative shrink-0 w-60 h-70 overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group cursor-pointer">
       <img 
         src={image} 
         alt={`Hotel ${index + 1}`} 
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+        className="absolute inset-0 w-full h-full object-cover"/>
       
       <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/40 to-transparent" />
       
-      {/* Heart Button */}
       <button
         onClick={handleHeartClick}
         className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 z-20 ${
           isFavorite
             ? "bg-white shadow-lg text-red-600 scale-100"
             : "bg-white/80 hover:bg-white text-gray-600 hover:scale-110 group-hover:bg-white"
-        }`}
-      >
+        }`}>
         {isFavorite ? <BsHeartFill className="w-5 h-5" /> : <BsHeart className="w-5 h-5" />}
       </button>
       
-      {/* Content Overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-5 text-white z-10">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="text-xl font-bold mb-1">{details.title}</h3>
-            <div className="flex items-center gap-1 text-sm text-gray-200">
-              <FiMapPin className="w-4 h-4" />
-              <span>{details.location}</span>
-            </div>
+        <h3 className="text-xl font-bold mb-1">{details.title}</h3>
+        
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-1 text-sm text-gray-200">
+            <FiMapPin className="w-4 h-4" />
+            <span>{details.location}</span>
           </div>
           
-          {/* Rating */}
           <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md">
             <FiStar className="w-4 h-4 text-yellow-400 fill-yellow-400" />
             <span className="text-sm font-semibold">{details.rating}</span>
           </div>
         </div>
         
-        {/* Price and Period */}
-        <div className="flex items-baseline gap-2 mt-3 pt-3 border-t border-white/20">
+        <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold">{details.price}</span>
           <span className="text-sm text-gray-200">for {details.period}</span>
         </div>
@@ -118,13 +109,13 @@ function Card() {
   const mumbaiHotelImages = [MHotel1, MHotel2, MHotel3, MHotel4, MHotel5, MHotel6, MHotel7];
   
   const mumbaiHotelDetails = [
-    { title: "Apartment in Udaipur", location: "Udaipur", price: "₹6,207", period: "2 nights", rating: "4.8" },
-    { title: "Room in Udaipur", location: "Udaipur", price: "₹7,989", period: "2 nights", rating: "4.9" },
-    { title: "Home in Udaipur", location: "Udaipur", price: "₹8,673", period: "4 nights", rating: "5.0" },
-    { title: "Room in Udaipur", location: "Udaipur", price: "₹6,000", period: "3 nights", rating: "4.8" },
-    { title: "Room in Pichola", location: "Pichola", price: "₹5,000", period: "2 nights", rating: "4.9" },
-    { title: "Home in pichola", location: "Pichola", price: "₹3,000", period: "2 nights", rating: "4.4" },
-    { title: "Place to stay in pichola", location: "Pichola", price: "₹4,600", period: "3 nights", rating: "4.7" },
+    { title: "Room in Bandra West", location: "Bandra", price: "₹7,532", period: "2 nights", rating: "4.9" },
+    { title: "Room in Santacruz East", location: "Mumbai", price: "₹5,989", period: "2 nights", rating: "4.8" },
+    { title: "Place to stay", location: "Bandra West", price: "₹8,973", period: "3 nights", rating: "4.8" },
+    { title: "Flat in Goregaon West", location: "Mumbai", price: "₹8,000", period: "2 nights", rating: "4.9" },
+    { title: "Studio Apartment", location: "Bandra West", price: "₹7,600", period: "2 nights", rating: "4.7" },
+    { title: "Place to stay", location: "Andheri West", price: "₹5,900", period: "2 nights", rating: "4.4" },
+    { title: "Apartment in Bandra", location: "Bandra East", price: "₹15,200", period: "4 nights", rating: "4.9" },
   ];
 
 

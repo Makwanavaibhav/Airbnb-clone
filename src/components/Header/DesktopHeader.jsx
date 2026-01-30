@@ -86,16 +86,13 @@ function DesktopHeader({ activeTab, setActiveTab }) {
 
   return (
     <>
-      {/* Main fixed header */}
-      <div className="fixed top-2 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
-        {/* Top row with logo, center content, and right buttons */}
+      <div className="fixed py-2 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between px-8 h-16 dark:bg-gray-900">
-          {/* Logo on left - Always visible */}
           <div className="shrink-0">
             <img src={LongLogo} alt="Airbnb" className="h-8 w-auto" />
           </div>
 
-          {/* Center area - Shows either NavItems OR CompactSearchBar */}
+          {/* Center area */}
           <div className="flex-1 mx-8 flex justify-center items-center">
             {isScrolled ? (
               <CompactSearchBar 
@@ -107,9 +104,8 @@ function DesktopHeader({ activeTab, setActiveTab }) {
             )}
           </div>
 
-          {/* Right side buttons - Always visible */}
+          {/* Right side buttons */}
           <div className="flex items-center gap-4 shrink-0">
-            {/* Hide HostDialog on screens less than 900px */}
             <div className="hidden min-[1150px]:block">
               <HostDialog 
                 selectedHostType={selectedHostType}
@@ -128,10 +124,7 @@ function DesktopHeader({ activeTab, setActiveTab }) {
         </div>
       </div>
 
-      {/* Spacer for fixed header */}
       <div className="h-16"></div>
-
-      {/* Full Search Bar - Below header (hides when scrolled) */}
       <div 
         ref={searchRef}
         className={`sticky top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
