@@ -5,7 +5,6 @@ function Footer() {
     <footer className="bg-white dark:bg-gray-900 text-black dark:text-white">
       <div className="px-6 py-12  lg:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-50 mb-12">
-          {/* Col 1: Support */}
           <div>
             <h3 className="text-xs font-semibold tracking-wider mb-4 text-black dark:text-gray-400">
               Support
@@ -49,7 +48,6 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Col 2: Hosting */}
           <div>
             <h3 className="text-xs font-semibold tracking-wider mb-4 text-black dark:text-gray-400">
               Hosting
@@ -108,7 +106,6 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Col 3: Airbnb */}
           <div>
             <h3 className="text-xs font-semibold tracking-wider mb-4 text-black dark:text-gray-400">
               Airbnb
@@ -142,11 +139,8 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Empty 4th column for spacing - Airbnb leaves this empty */}
-          <div></div>
         </div>
 
-        {/* Bottom separator and copyright */}
         <div className="border-t border-gray-300 dark:border-gray-700 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div className="text-sm text-gray-600 dark:text-gray-400">

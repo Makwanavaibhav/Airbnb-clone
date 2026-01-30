@@ -123,7 +123,7 @@ function Card() {
     <div>
       {/* Udaipur Hotels Section */}
       <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Popular homes in Udaipur</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">Popular homes in Udaipur</h2>
         <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
           {udaipurHotelImages.map((image, index) => {
             const details = udaipurHotelDetails[index] || udaipurHotelDetails[0];
@@ -142,7 +142,7 @@ function Card() {
       
       {/* Goa Hotels Section */}
       <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Top Picks in Goa</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">Top Picks in Goa</h2>
         <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
           {goaHotelImages.map((image, index) => {
             const details = goaHotelDetails[index] || goaHotelDetails[0];
@@ -161,7 +161,7 @@ function Card() {
 
       {/* Mumbai Hotels Section */}
       <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Places to stay in Mumbai</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">Places to stay in Mumbai</h2>
         <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
           {mumbaiHotelImages.map((image, index) => {
             const details = mumbaiHotelDetails[index] || mumbaiHotelDetails[0];
