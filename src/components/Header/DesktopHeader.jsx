@@ -5,7 +5,6 @@ import LocaleModal from "../Header/LocaleModal/LocalModal.jsx";
 import NavItems from "../Header/NavItems/NavItems.jsx";
 import ThemeToggle from "../Header/ThemeToggle/ThemeToggle.jsx";
 import SearchBar from "../Header/SearchBar/Searchbar.jsx";
-import CompactSearchBar from "../Header/SearchBar/CompactSearchBar.jsx";
 import HostDialog from "../Header/HostDialog/HostDialog.jsx";
 import UserMenu from "../Header/UserMenu/UserMenu.jsx";
 
@@ -96,9 +95,11 @@ function DesktopHeader({ activeTab, setActiveTab }) {
           {/* Center area */}
           <div className="flex-1 mx-8 flex justify-center items-center">
             {isScrolled ? (
-              <CompactSearchBar 
+              <SearchBar
+                variant="compact"
                 compactSearchRef={compactSearchRef}
                 searchPillWidth={searchPillWidth}
+                activeTab={activeTab}
               />
             ) : (
               <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -130,7 +131,6 @@ function DesktopHeader({ activeTab, setActiveTab }) {
       
       {/* Search Section - Updated borders */}
       <div 
-        ref={searchRef}
         className={`sticky top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
           isScrolled 
             ? '-translate-y-full opacity-0 pointer-events-none' 
@@ -139,7 +139,7 @@ function DesktopHeader({ activeTab, setActiveTab }) {
       >
         <div className="px-8 py-6">
           <div className="flex justify-center">
-            <SearchBar activeTab={activeTab} />
+            <SearchBar activeTab={activeTab} searchRef={searchRef} />
           </div>
         </div>
       </div>

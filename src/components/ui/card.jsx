@@ -25,55 +25,59 @@ import MHotel6 from "../../assets/hotels/Hotel-21.jpeg";
 import MHotel7 from "../../assets/hotels/Hotel-22.jpeg";
 
 
+import { Link } from "react-router-dom";
+
 function HotelCard({ image, details, index }) {
   const [isFavorite, setIsFavorite] = React.useState(false);
 
   const handleHeartClick = (e) => {
+    e.preventDefault(); // Prevent navigating when clicking heart
     e.stopPropagation();
     setIsFavorite(!isFavorite);
   };
 
   return (
-    <div 
-      className="relative shrink-0 w-60 h-70 overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group cursor-pointer">
-      <img 
-        src={image} 
-        alt={`Hotel ${index + 1}`} 
-        className="absolute inset-0 w-full h-full object-cover"/>
-      
-      <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/40 to-transparent" />
-      
-      <button
-        onClick={handleHeartClick}
-        className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 z-20 ${
-          isFavorite
-            ? "bg-white shadow-lg text-red-600 scale-100"
-            : "bg-white/80 hover:bg-white text-gray-600 hover:scale-110 group-hover:bg-white"
-        }`}>
-        {isFavorite ? <BsHeartFill className="w-5 h-5" /> : <BsHeart className="w-5 h-5" />}
-      </button>
-      
-      <div className="absolute bottom-0 left-0 right-0 p-5 text-white z-10">
-        <h3 className="text-xl font-bold mb-1">{details.title}</h3>
+    <Link to={`/hotel/${index + 1}`} className="flex flex-col gap-3 group cursor-pointer w-[300px] shrink-0">
+      {/* Image container - Exact square */}
+      <div className="relative aspect-square overflow-hidden rounded-xl">
+        <img 
+          src={image} 
+          alt={`Hotel ${index + 1}`} 
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-300"
+        />
         
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-1 text-sm text-gray-200">
-            <FiMapPin className="w-4 h-4" />
-            <span>{details.location}</span>
-          </div>
-          
-          <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md">
-            <FiStar className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            <span className="text-sm font-semibold">{details.rating}</span>
+        {/* Favorite Button */}
+        <button
+          onClick={handleHeartClick}
+          className="absolute top-3 right-3 p-2 z-20 hover:scale-110 active:scale-95 transition-all"
+        >
+          {isFavorite ? (
+            <BsHeartFill className="w-6 h-6 text-airbnb drop-shadow-md" style={{ color: '#FF385C' }} />
+          ) : (
+            <BsHeart className="w-6 h-6 text-white drop-shadow-md" style={{ strokeWidth: 1 }} />
+          )}
+        </button>
+      </div>
+      
+      {/* Text Details Container */}
+      <div className="flex flex-col text-left">
+        <div className="flex justify-between items-start">
+          <h3 className="text-[15px] font-semibold text-gray-900 truncate pr-2">{details.location}</h3>
+          <div className="flex items-center gap-1 shrink-0">
+            <FiStar className="w-[14px] h-[14px] fill-current text-gray-900" />
+            <span className="text-[15px] text-gray-900 font-light">{details.rating}</span>
           </div>
         </div>
         
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold">{details.price}</span>
-          <span className="text-sm text-gray-200">for {details.period}</span>
+        <p className="text-[15px] text-gray-500 font-light truncate">{details.title}</p>
+        <p className="text-[15px] text-gray-500 font-light truncate">{details.period}</p>
+        
+        <div className="mt-1 flex items-baseline gap-1">
+          <span className="text-[15px] font-semibold text-gray-900">{details.price}</span>
+          <span className="text-[15px] text-gray-900 font-light">night</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
