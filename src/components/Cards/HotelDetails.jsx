@@ -7,43 +7,15 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 // Mock Data (In a real app, this would be fetched based on the ID)
-const hotelData = {
-  id: 1,
-  title: "Entire villa hosted by Vaibhav",
-  location: "Udaipur, Rajasthan, India",
-  rating: 4.8,
-  reviews: 124,
-  host: {
-    name: "Vaibhav",
-    joined: "Joined in 2020",
-    image: "https://i.pravatar.cc/150?img=33"
-  },
-  guests: 6,
-  bedrooms: 3,
-  beds: 3,
-  baths: 2,
-  price: 6207,
-  description: "Experience the magic of Udaipur in this stunning villa overlooking the city. Perfect for families or a group of friends, this place offers a blend of modern amenities with traditional Rajasthani architecture.",
-  images: [
-    "https://a0.muscache.com/im/pictures/miso/Hosting-52410312/original/a0a19491-bdfc-4573-ae09-0d19bc2a16d5.jpeg?im_w=1200",
-    "https://a0.muscache.com/im/pictures/miso/Hosting-52410312/original/c41de454-0466-41f2-98ed-7389a0f0bc6a.jpeg?im_w=720",
-    "https://a0.muscache.com/im/pictures/miso/Hosting-52410312/original/87b4712c-47fc-48eb-aa2d-b73373adfb9c.jpeg?im_w=720",
-    "https://a0.muscache.com/im/pictures/miso/Hosting-52410312/original/cd0b0dcd-d877-4402-ae2b-7be71981a329.jpeg?im_w=720",
-    "https://a0.muscache.com/im/pictures/miso/Hosting-52410312/original/61f5f922-a9b8-4d6d-abd4-2ebfc1a2a464.jpeg?im_w=720"
-  ],
-  amenities: [
-    "Wifi", "Pool", "Kitchen", "Free parking", "Air conditioning", "Pet friendly"
-  ],
-  coordinates: [24.5854, 73.7125]
-};
+import { hotels } from "../../data/hotels";
 
 const HotelDetails = () => {
   const { id } = useParams();
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
-  // In real app, fetch data here based on `id`
-  const data = hotelData;
+  // Fetch data based on `id`
+  const data = hotels.find(h => h.id === parseInt(id)) || hotels[0];
 
   const calculateDays = () => {
     if (startDate && endDate) {
@@ -54,7 +26,7 @@ const HotelDetails = () => {
   };
 
   const days = calculateDays();
-  const totalPrice = data.price * days;
+  const totalPrice = data.priceRaw * days;
   const serviceFee = Math.round(totalPrice * 0.14); // 14% Airbnb fee approx
   const total = totalPrice + serviceFee;
 
@@ -84,19 +56,19 @@ const HotelDetails = () => {
       {/* 5-Image Gallery Grid */}
       <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[460px] rounded-xl overflow-hidden mb-12">
         <div className="col-span-2 row-span-2">
-          <img src={data.images[0]} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <img src={data.image} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <img src={data.images[1]} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <img src={data.image} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <img src={data.images[2]} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <img src={data.image} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <img src={data.images[3]} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <img src={data.image} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1 relative">
-          <img src={data.images[4]} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <img src={data.image} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
           <button className="absolute bottom-4 right-4 bg-white border border-black px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2">
             Show all photos
           </button>
@@ -168,7 +140,7 @@ const HotelDetails = () => {
         <div className="w-[330px]">
           <div className="sticky top-28 bg-white border border-gray-200 rounded-xl shadow-[0_6px_16px_rgba(0,0,0,0.12)] p-6 z-10">
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-[22px] font-semibold">₹{data.price.toLocaleString('en-IN')}</span>
+              <span className="text-[22px] font-semibold">₹{data.priceRaw.toLocaleString('en-IN')}</span>
               <span className="text-[15px] font-light text-gray-600">night</span>
             </div>
 

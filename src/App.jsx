@@ -3,7 +3,7 @@ import Header from "./components/Header/Header.jsx";
 import Footer from "./components/Footer/Footer.jsx";
 import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import HotelDetails from "./pages/HotelDetails.jsx";
+import HotelDetails from "./components/Cards/HotelDetails.jsx";
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
 

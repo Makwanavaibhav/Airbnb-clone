@@ -1,0 +1,1 @@
+hotel details for all.

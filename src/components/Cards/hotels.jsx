@@ -1,14 +1,13 @@
-import React from "react";
 import Card from "../ui/card";
+import { udaipurHotels, goaHotels, mumbaiHotels } from "../../data/hotels";
 
 function Cards() {
   return (
     <div className="w-full px-6 py-8">
-      {/* Header */}
-      <div className="mb-6">
-      </div>
-      
-      <Card />
+      <Card hotels={udaipurHotels} title="Popular homes in Udaipur" />
+      <Card hotels={goaHotels} title="Top Picks in Goa" />
+      <Card hotels={mumbaiHotels} title="Places to stay in Mumbai" />
+
       
       <style jsx>{`
         .scrollbar-hide {
