@@ -38,19 +38,19 @@ export function HotelCard({ hotel }) {
       {/* Text Details Container */}
       <div className="flex flex-col text-left">
         <div className="flex justify-between items-start">
-          <h3 className="text-[15px] font-semibold text-gray-900 truncate pr-2">{hotel.location}</h3>
+          <h3 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 truncate pr-2">{hotel.location}</h3>
           <div className="flex items-center gap-1 shrink-0">
-            <FiStar className="w-[14px] h-[14px] fill-current text-gray-900" />
-            <span className="text-[15px] text-gray-900 font-light">{hotel.rating}</span>
+            <FiStar className="w-[14px] h-[14px] fill-current text-gray-900 dark:text-gray-100" />
+            <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">{hotel.rating}</span>
           </div>
         </div>
         
-        <p className="text-[15px] text-gray-500 font-light truncate">{hotel.title}</p>
-        <p className="text-[15px] text-gray-500 font-light truncate">{hotel.period}</p>
+        <p className="text-[15px] text-gray-500 dark:text-gray-400 font-light truncate">{hotel.title}</p>
+        <p className="text-[15px] text-gray-500 dark:text-gray-400 font-light truncate">{hotel.period}</p>
         
         <div className="mt-1 flex items-baseline gap-1">
-          <span className="text-[15px] font-semibold text-gray-900">{hotel.price}</span>
-          <span className="text-[15px] text-gray-900 font-light">night</span>
+          <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">{hotel.price}</span>
+          <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">night</span>
         </div>
       </div>
     </Link>

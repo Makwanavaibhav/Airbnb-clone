@@ -38,12 +38,12 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-142 p-0 gap-0 bg-white overflow-hidden rounded-xl border-none">
+      <DialogContent className="sm:max-w-142 p-0 gap-0 bg-white dark:bg-gray-900 overflow-hidden rounded-xl border-none">
         {/* Header */}
-        <DialogHeader className={`p-4 border-b flex flex-row items-center justify-center relative ${isTransparent ? "bg-transparent" : "bg-white"}`}>
+        <DialogHeader className={`p-4 border-b dark:border-gray-700 flex flex-row items-center justify-center relative ${isTransparent ? "bg-transparent" : "bg-white dark:bg-gray-900"}`}>
           <button
             onClick={onClose}
-            className="absolute left-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+            className="absolute left-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -57,14 +57,14 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
           <h2 className="text-2xl font-semibold mb-6">Welcome to Airbnb</h2>
 
           {/* Form Section */}
-          <div className="space-y-0 rounded-xl border border-gray-400 overflow-hidden">
+          <div className="space-y-0 rounded-xl border border-gray-400 dark:border-gray-600 overflow-hidden">
             <Select 
               defaultValue="+91"
               onValueChange={(value) => setCountryCode(value)}
             >
               <SelectTrigger className="w-full h-14 px-4 border-none focus:ring-0 rounded-none border-b">
                 <div className="flex flex-col items-start">
-                  <span className="text-[10px] text-gray-500 uppercase font-bold">Country/Region</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">Country/Region</span>
                   <SelectValue placeholder="Country/Region" />
                 </div>
               </SelectTrigger>
@@ -86,7 +86,7 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
             />
           </div>
 
-          <p className="text-[12px] text-gray-600 mt-2 leading-tight">
+          <p className="text-[12px] text-gray-600 dark:text-gray-400 mt-2 leading-tight">
             We’ll call or text you to confirm your number. Standard message and data rates apply. 
             <span className="font-semibold underline ml-1 cursor-pointer">Privacy Policy</span>
           </p>
@@ -105,7 +105,7 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
               <Separator className="w-full" />
             </div>
             <div className="relative flex justify-center text-xs">
-                <span className={`${isTransparent ? "bg-transparent" : "bg-white"} px-4 text-gray-500`}>or</span>
+                <span className={`${isTransparent ? "bg-transparent" : "bg-white dark:bg-gray-900"} px-4 text-gray-500 dark:text-gray-400`}>or</span>
             </div>
           </div>
 

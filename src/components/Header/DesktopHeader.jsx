@@ -17,12 +17,9 @@ function DesktopHeader({ activeTab, setActiveTab }) {
   const [activeLocaleTab, setActiveLocaleTab] = useState("language");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showFullHeader, setShowFullHeader] = useState(true);
-  const [searchPillWidth, setSearchPillWidth] = useState("auto");
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
   const searchRef = useRef(null);
-  const compactSearchRef = useRef(null);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -39,15 +36,8 @@ function DesktopHeader({ activeTab, setActiveTab }) {
           const currentScrollY = window.scrollY;
           
           if (currentScrollY < 50) {
-            setShowFullHeader(true);
             setIsScrolled(false);
-          } 
-          else if (currentScrollY > lastScrollY.current) {
-            setShowFullHeader(false);
-            setIsScrolled(true);
-          }
-          else {
-            setShowFullHeader(false);
+          } else {
             setIsScrolled(true);
           }
           
@@ -63,25 +53,7 @@ function DesktopHeader({ activeTab, setActiveTab }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    const updateSearchPillWidth = () => {
-      if (searchRef.current && compactSearchRef.current) {
-        const fullWidth = searchRef.current.offsetWidth;
-        compactSearchRef.current.style.width = `${fullWidth}px`;
-        setSearchPillWidth(`${fullWidth}px`);
-      }
-    };
 
-    updateSearchPillWidth();
-    window.addEventListener('resize', updateSearchPillWidth);
-    
-    const timeoutId = setTimeout(updateSearchPillWidth, 100);
-    
-    return () => {
-      window.removeEventListener('resize', updateSearchPillWidth);
-      clearTimeout(timeoutId);
-    };
-  }, [showFullHeader]);
 
   return (
     <>
@@ -97,8 +69,6 @@ function DesktopHeader({ activeTab, setActiveTab }) {
             {isScrolled ? (
               <SearchBar
                 variant="compact"
-                compactSearchRef={compactSearchRef}
-                searchPillWidth={searchPillWidth}
                 activeTab={activeTab}
               />
             ) : (
@@ -132,9 +102,9 @@ function DesktopHeader({ activeTab, setActiveTab }) {
       {/* Search Section - Updated borders */}
       <div 
         className={`sticky top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
-          isScrolled 
-            ? '-translate-y-full opacity-0 pointer-events-none' 
-            : 'translate-y-0 opacity-100'
+          isScrolled
+            ? "-translate-y-full opacity-0 pointer-events-none"
+            : "translate-y-0 opacity-100"
         }`}
       >
         <div className="px-8 py-6">

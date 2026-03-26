@@ -16,8 +16,16 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      // This tells Vite that "@" should point to your "src" folder
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  server: {
+    proxy: {
+      // Forward /api/* → Express backend during development
+      "/api": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
     },
   },
 })
