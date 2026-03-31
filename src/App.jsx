@@ -28,7 +28,7 @@ function App() {
       <Routes>
         <Route path="/" element={
           <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-            <Cards />
+            <Cards activeTab={activtab} />
           </MainLayout>
         } />
         

@@ -1,37 +1,46 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Search, MapPin, Calendar, Users, X, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
+import {
+  Search, X, ChevronLeft, ChevronRight, Minus, Plus, MapPin,
+  Navigation, Building2, Palmtree, Landmark, Trees, Compass,
+} from "lucide-react";
+import { useSearch } from "../../../context/SearchContext.jsx";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const SUGGESTED_DESTINATIONS = [
-  { icon: "🌍", label: "I'm flexible", sublabel: "Explore any destination" },
-  { icon: "📍", label: "Nearby", sublabel: "Find what's around you" },
-  { icon: "🏙️", label: "Mumbai", sublabel: "India" },
-  { icon: "🌴", label: "Goa", sublabel: "India" },
-  { icon: "🏔️", label: "Manali", sublabel: "Himachal Pradesh, India" },
-  { icon: "🕌", label: "Jaipur", sublabel: "Rajasthan, India" },
+// ─── Destination data ─────────────────────────────────────────────────────────
+const DESTINATIONS = [
+  { id: "nearby",   label: "Nearby",                subtitle: "Find what's around you",                    Icon: Navigation, bg: "bg-blue-50",   color: "text-blue-500"   },
+  { id: "mumbai",   label: "Mumbai, Maharashtra",   subtitle: "For sights like Gateway of India",           Icon: Building2,  bg: "bg-orange-50", color: "text-orange-500" },
+  { id: "goa",      label: "North Goa, Goa",        subtitle: "Popular beach destination",                  Icon: Palmtree,   bg: "bg-green-50",  color: "text-green-500"  },
+  { id: "udaipur",  label: "Udaipur, Rajasthan",    subtitle: "Because your wishlist has stays in Udaipur", Icon: Landmark,   bg: "bg-indigo-50", color: "text-indigo-500" },
+  { id: "jaipur",   label: "Jaipur, Rajasthan",     subtitle: "For its stunning architecture",              Icon: Landmark,   bg: "bg-pink-50",   color: "text-pink-500"   },
+  { id: "delhi",    label: "New Delhi, Delhi",       subtitle: "For sights like India Gate",                 Icon: Building2,  bg: "bg-violet-50", color: "text-violet-500" },
+  { id: "lonavala", label: "Lonavala, Maharashtra", subtitle: "Misty hills & scenic valleys",               Icon: Trees,      bg: "bg-emerald-50",color: "text-emerald-500"},
+  { id: "varanasi", label: "Varanasi, Uttar Pradesh", subtitle: "A hidden gem",                             Icon: Compass,    bg: "bg-amber-50",  color: "text-amber-500"  },
 ];
 
-const MONTH_NAMES = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+// ─── Services data ────────────────────────────────────────────────────────────
+const SERVICES = [
+  { id: "photography",    label: "Photography",    icon: "📷" },
+  { id: "chefs",          label: "Chefs",          icon: "👨\u200d🍳" },
+  { id: "massage",        label: "Massage",        icon: "💆" },
+  { id: "prepared-meals", label: "Prepared meals", icon: "🍽️" },
+  { id: "training",       label: "Training",       icon: "🏋️" },
+  { id: "makeup",         label: "Make-up",        icon: "💄" },
+  { id: "hair",           label: "Hair",           icon: "✂️" },
+  { id: "spa",            label: "Spa treatments", icon: "🧖" },
+  { id: "catering",       label: "Catering",       icon: "🍱" },
+  { id: "nails",          label: "Nails",          icon: "💅" },
 ];
 
-function getDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
-}
+// ─── Calendar helpers ─────────────────────────────────────────────────────────
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const getDaysInMonth     = (y, m) => new Date(y, m + 1, 0).getDate();
+const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
 
-function getFirstDayOfMonth(year, month) {
-  return new Date(year, month, 1).getDay();
-}
-
-// ─── Calendar Sub-component ──────────────────────────────────────────────────
-
+// ─── CalendarMonth ────────────────────────────────────────────────────────────
 function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay, setHoveredDay }) {
   const daysInMonth = getDaysInMonth(year, month);
-  const firstDay = getFirstDayOfMonth(year, month);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const firstDay    = getFirstDayOfMonth(year, month);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -39,26 +48,18 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay
 
   return (
     <div className="flex-1 min-w-0">
-      <div className="text-center font-semibold text-gray-900 mb-4 text-sm">
-        {MONTH_NAMES[month]} {year}
-      </div>
+      <div className="text-center font-semibold text-gray-900 mb-4 text-sm">{MONTH_NAMES[month]} {year}</div>
       <div className="grid grid-cols-7 gap-0 text-center">
         {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
           <div key={d} className="text-xs font-semibold text-gray-400 py-1">{d}</div>
         ))}
         {cells.map((day, idx) => {
           if (!day) return <div key={`e-${idx}`} />;
-          const date = new Date(year, month, day);
-          date.setHours(0, 0, 0, 0);
-          const isPast = date < today;
-          const isStart = startDate && date.getTime() === startDate.getTime();
-          const isEnd = endDate && date.getTime() === endDate.getTime();
-          const isInRange =
-            startDate &&
-            (endDate || hoveredDay) &&
-            date > startDate &&
-            date < (hoveredDay && !endDate ? hoveredDay : endDate);
-
+          const date = new Date(year, month, day); date.setHours(0, 0, 0, 0);
+          const isPast    = date < today;
+          const isStart   = startDate && date.getTime() === startDate.getTime();
+          const isEnd     = endDate   && date.getTime() === endDate.getTime();
+          const isInRange = startDate && (endDate || hoveredDay) && date > startDate && date < (hoveredDay && !endDate ? hoveredDay : endDate);
           return (
             <button
               key={day}
@@ -66,13 +67,13 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay
               onClick={() => !isPast && onDayClick(date)}
               onMouseEnter={() => !isPast && startDate && !endDate && setHoveredDay(date)}
               onMouseLeave={() => setHoveredDay(null)}
-              className={`
-                relative h-9 w-full text-sm font-medium rounded-full transition-all
-                ${isPast ? "text-gray-300 cursor-not-allowed" : "cursor-pointer"}
-                ${isStart || isEnd ? "bg-gray-900 text-white z-10" : ""}
-                ${isInRange ? "bg-airbnb/10 rounded-none" : ""}
-                ${!isPast && !isStart && !isEnd ? "hover:bg-gray-100" : ""}
-              `}
+              className={[
+                "relative h-9 w-full text-sm font-medium rounded-full transition-all",
+                isPast ? "text-gray-300 cursor-not-allowed" : "cursor-pointer",
+                isStart || isEnd ? "bg-gray-900 text-white z-10" : "",
+                isInRange ? "bg-rose-50 rounded-none" : "",
+                !isPast && !isStart && !isEnd ? "hover:bg-gray-100" : "",
+              ].join(" ")}
             >
               {day}
             </button>
@@ -83,9 +84,8 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay
   );
 }
 
-// ─── Guest Counter Sub-component ─────────────────────────────────────────────
-
-function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0 }) {
+// ─── GuestCounter ─────────────────────────────────────────────────────────────
+function GuestCounter({ label, sublabel, value, onInc, onDec }) {
   return (
     <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
       <div>
@@ -94,21 +94,15 @@ function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0 }) {
       </div>
       <div className="flex items-center gap-3">
         <button
-          onClick={onDec}
-          disabled={value <= min}
+          onClick={onDec} disabled={value <= 0}
           className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-            value <= min
-              ? "border-gray-200 text-gray-200 cursor-not-allowed"
-              : "border-gray-400 text-gray-600 hover:border-gray-900"
+            value <= 0 ? "border-gray-200 text-gray-200 cursor-not-allowed" : "border-gray-400 text-gray-600 hover:border-gray-900"
           }`}
         >
           <Minus className="h-3 w-3" />
         </button>
         <span className="w-5 text-center font-semibold text-sm">{value}</span>
-        <button
-          onClick={onInc}
-          className="w-8 h-8 rounded-full border border-gray-400 text-gray-600 flex items-center justify-center hover:border-gray-900 transition-all"
-        >
+        <button onClick={onInc} className="w-8 h-8 rounded-full border border-gray-400 text-gray-600 flex items-center justify-center hover:border-gray-900 transition-all">
           <Plus className="h-3 w-3" />
         </button>
       </div>
@@ -116,116 +110,121 @@ function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0 }) {
   );
 }
 
-// ─── Main SearchBar ──────────────────────────────────────────────────────────
+// ─── Main SearchBar ───────────────────────────────────────────────────────────
+function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, onExpand, where, dateLabel, guestLabel }) {
+  const { searchState, setSearchState, appliedSearch, setAppliedSearch } = useSearch();
+  const [activeSection, setActiveSection]   = useState(null);
+  const [calendarMode, setCalendarMode]     = useState("dates");
+  const [hoveredDay, setHoveredDay]         = useState(null);
+  const [calMonthOffset, setCalMonthOffset] = useState(0);
 
-function SearchBar({
-  activeTab,
-  variant = "full",
-  searchRef,
-  compactSearchRef,
-  onExpand,
-  where,
-  dateLabel,
-  guestLabel,
-}) {
-  // ── State ──
-  const [activeSection, setActiveSection] = useState(null); // "where" | "when" | "who" | null
-  const [destination, setDestination] = useState("");
-  const [calendarMode, setCalendarMode] = useState("dates"); // "dates" | "flexible"
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-  const [hoveredDay, setHoveredDay] = useState(null);
-  const [calMonthOffset, setCalMonthOffset] = useState(0); // months offset from today
-  const [guests, setGuests] = useState({ adults: 0, children: 0, infants: 0, pets: 0 });
   const wrapperRef = useRef(null);
+  const inputRef   = useRef(null);
 
-  // ── Derived values ──
-  const today = new Date();
-  const leftMonth = (today.getMonth() + calMonthOffset) % 12;
-  const leftYear = today.getFullYear() + Math.floor((today.getMonth() + calMonthOffset) / 12);
+  // Read draft state from context
+  const { destination, startDate, endDate, guests } = searchState;
+  
+  // Helpers to update context state
+  const updateSearchState = (key, value) => {
+    setSearchState((prev) => ({ ...prev, [key]: value }));
+  };
+  const setDestination = (val) => updateSearchState("destination", val);
+  const setStartDate   = (val) => updateSearchState("startDate", val);
+  const setEndDate     = (val) => updateSearchState("endDate", val);
+  const setGuests      = (valOrFn) => {
+    setSearchState((prev) => ({
+      ...prev,
+      guests: typeof valOrFn === "function" ? valOrFn(prev.guests) : valOrFn
+    }));
+  };
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const today         = new Date();
+  const leftMonth     = (today.getMonth() + calMonthOffset) % 12;
+  const leftYear      = today.getFullYear() + Math.floor((today.getMonth() + calMonthOffset) / 12);
   const rightMonthRaw = leftMonth + 1;
-  const rightMonth = rightMonthRaw % 12;
-  const rightYear = rightMonthRaw > 11 ? leftYear + 1 : leftYear;
+  const rightMonth    = rightMonthRaw % 12;
+  const rightYear     = rightMonthRaw > 11 ? leftYear + 1 : leftYear;
 
   const totalGuests = guests.adults + guests.children;
-  const guestSummary =
-    totalGuests === 0
-      ? activeTab === "Services" ? "Add services" : "Add guests"
-      : `${totalGuests} guest${totalGuests > 1 ? "s" : ""}${guests.infants > 0 ? `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}` : ""}${guests.pets > 0 ? `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}` : ""}`;
+  const guestSummary = totalGuests === 0
+    ? (activeTab === "Services" ? "Add service" : "Add guests")
+    : `${totalGuests} guest${totalGuests > 1 ? "s" : ""}${guests.infants > 0 ? `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}` : ""}${guests.pets > 0 ? `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}` : ""}`;
 
   const dateSummary = (() => {
     if (!startDate) return "Add dates";
     const fmt = (d) => `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
-    if (!endDate) return fmt(startDate);
-    return `${fmt(startDate)} – ${fmt(endDate)}`;
+    return endDate ? `${fmt(startDate)} – ${fmt(endDate)}` : fmt(startDate);
   })();
 
-  // ── Click outside to close ──
+  // ── Click outside ─────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setActiveSection(null);
-      }
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setActiveSection(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Day click logic ──
+  // Auto-focus search input when Where opens
+  useEffect(() => {
+    if (activeSection === "where") setTimeout(() => inputRef.current?.focus(), 20);
+  }, [activeSection]);
+
+  // ── Day click ─────────────────────────────────────────────────────────────
   const handleDayClick = (date) => {
-    if (!startDate || (startDate && endDate)) {
-      setStartDate(date);
-      setEndDate(null);
-    } else {
-      if (date > startDate) {
-        setEndDate(date);
-        setActiveSection("who"); // auto-advance
-      } else {
-        setStartDate(date);
-        setEndDate(null);
-      }
-    }
+    if (!startDate || (startDate && endDate)) { setStartDate(date); setEndDate(null); }
+    else if (date > startDate) { setEndDate(date); setActiveSection("who"); }
+    else { setStartDate(date); setEndDate(null); }
   };
 
-  // ── Guest helpers ──
-  const incGuest = (key) => setGuests((g) => ({ ...g, [key]: g[key] + 1 }));
-  const decGuest = (key) =>
-    setGuests((g) => ({ ...g, [key]: Math.max(key === "adults" ? 0 : 0, g[key] - 1) }));
+  // ── Guest helpers ─────────────────────────────────────────────────────────
+  const incGuest = (k) => setGuests((g) => ({ ...g, [k]: g[k] + 1 }));
+  const decGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.max(0, g[k] - 1) }));
 
-  const isActive = activeSection !== null;
+  // ── Divider visibility ────────────────────────────────────────────────────
+  const div1 = !(activeSection === "where" || activeSection === "when");
+  const div2 = !(activeSection === "when"  || activeSection === "who");
+
+  const isActive      = activeSection !== null;
+  const filteredDests = destination
+    ? DESTINATIONS.filter((d) => d.label.toLowerCase().includes(destination.toLowerCase()))
+    : DESTINATIONS;
 
   // ════════════════════════════════════════════════════════════════════════════
-  // COMPACT VARIANT (scrolled state)
+  // COMPACT VARIANT
   // ════════════════════════════════════════════════════════════════════════════
   if (variant === "compact") {
     const handleExpand = typeof onExpand === "function" ? onExpand : () => {};
+    
+    // Formatting for applied search
+    const totalAppliedGuests = appliedSearch.guests.adults + appliedSearch.guests.children;
+    const appliedGuestSummary = totalAppliedGuests === 0 ? "Add guests" : `${totalAppliedGuests} guests`;
+    const appliedDateSummary = appliedSearch.startDate
+      ? `${MONTH_NAMES[appliedSearch.startDate.getMonth()].slice(0,3)} ${appliedSearch.startDate.getDate()}`
+      : "Anytime";
 
     return (
       <div ref={compactSearchRef} className="flex justify-center">
         <button
           onClick={handleExpand}
           aria-label="Expand search"
-          className="flex items-center bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 overflow-hidden h-12"
-          style={{ width: "fit-content", maxWidth: "380px" }}
+          className="flex items-center bg-white rounded-full shadow-md hover:shadow-xl transition-all duration-200 border border-gray-200 overflow-hidden h-12"
+          style={{ width: "fit-content", maxWidth: "420px" }}
         >
-          {/* Where */}
           <div className="flex items-center px-4 border-r border-gray-200 h-full">
             <span className="font-semibold text-gray-900 text-sm whitespace-nowrap">
-              {where || "Anywhere"}
+              {appliedSearch.destination || where || "Anywhere"}
             </span>
           </div>
-
-          {/* When */}
           <div className="flex items-center px-4 border-r border-gray-200 h-full">
             <span className="font-semibold text-gray-900 text-sm whitespace-nowrap">
-              {dateLabel || "Anytime"}
+              {appliedSearch.startDate ? appliedDateSummary : (dateLabel || "Anytime")}
             </span>
           </div>
-
-          {/* Who + Search button */}
           <div className="flex items-center gap-3 pl-4 pr-2 h-full">
             <span className="text-gray-500 text-sm whitespace-nowrap">
-              {guestLabel || (activeTab === "Services" ? "Add services" : "Add guests")}
+              {totalAppliedGuests > 0 ? appliedGuestSummary : (guestLabel || "Add guests")}
             </span>
             <div className="bg-[#ff385c] h-8 w-8 rounded-full flex items-center justify-center text-white hover:bg-[#e31c5f] transition-colors shrink-0">
               <Search className="h-3.5 w-3.5" strokeWidth={3} />
@@ -237,90 +236,181 @@ function SearchBar({
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // FULL EXPANDED VARIANT
+  // FULL VARIANT
   // ════════════════════════════════════════════════════════════════════════════
   return (
-    <>
-      {/* Backdrop */}
-      {isActive && (
-        <div
-          className="fixed inset-0 bg-black/20 z-30"
-          onMouseDown={() => setActiveSection(null)}
-        />
-      )}
+    <div ref={wrapperRef} className="w-full flex justify-center">
 
-      {/* Search pill wrapper */}
-      <div ref={wrapperRef} className="relative z-40 w-full flex justify-center">
-        <div
-          ref={searchRef}
-          className={`flex items-center w-full max-w-3xl rounded-full transition-all duration-200 h-16 ${
-            isActive
-              ? "bg-gray-100 shadow-none border border-gray-200"
-              : "bg-white border border-gray-200 shadow-lg hover:shadow-xl"
-          }`}
-        >
-          {/* ── WHERE ── */}
+      {/* ── Search Pill ──────────────────────────────────────────────────────── */}
+      <div
+        ref={searchRef}
+        className={`flex items-center w-full max-w-3xl rounded-full transition-all duration-200 h-16 ${
+          isActive
+            ? "bg-gray-100 shadow-none border border-gray-200"
+            : "bg-white border border-gray-200 shadow-lg hover:shadow-xl"
+        }`}
+      >
+
+        {/* ══ WHERE — relative wrapper so dropdown anchors here ══ */}
+        <div className="relative flex-1 h-full">
           <button
             onClick={() => setActiveSection(activeSection === "where" ? null : "where")}
-            className={`flex flex-col justify-center px-6 rounded-full h-full flex-1 text-left transition-colors duration-150 ${
-              activeSection === "where"
-                ? "bg-white shadow-md"
-                : isActive
-                ? "hover:bg-gray-200/60"
-                : "hover:bg-gray-100"
+            className={`flex flex-col justify-center px-6 rounded-full h-full w-full text-left transition-colors duration-150 ${
+              activeSection === "where" ? "bg-white shadow-md" : isActive ? "hover:bg-gray-200/60" : "hover:bg-gray-100"
             }`}
           >
             <span className="text-xs font-bold text-gray-900">Where</span>
-            <span className={`text-sm ${destination ? "text-gray-900 font-medium" : "text-gray-400"}`}>
+            <span className={`text-sm truncate ${destination ? "text-gray-900 font-medium" : "text-gray-400"}`}>
               {destination || "Search destinations"}
             </span>
           </button>
 
-          <div className={`h-8 w-px ${isActive && activeSection !== "where" && activeSection !== "when" ? "bg-transparent" : "bg-gray-200"}`} />
+          {activeSection === "where" && (
+            <div className="absolute top-full mt-3 left-0 z-50">
+              <div className="bg-white rounded-3xl shadow-[0_6px_20px_rgba(0,0,0,0.18)] p-4 w-[400px]">
+                {/* Input */}
+                <div className="relative mb-3">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="Search destinations"
+                    className="w-full pl-10 pr-9 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-gray-400 transition-colors bg-white"
+                  />
+                  {destination && (
+                    <button onClick={() => setDestination("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">Suggested destinations</p>
+                <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                  {filteredDests.length === 0
+                    ? <p className="text-sm text-gray-400 text-center py-6">No destinations found</p>
+                    : filteredDests.map((dest) => {
+                        const Icon = dest.Icon;
+                        return (
+                          <button
+                            key={dest.id}
+                            onClick={() => { setDestination(dest.label); setActiveSection("when"); }}
+                            className="flex items-center gap-4 w-full px-2 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-left"
+                          >
+                            <div className={`w-[52px] h-[52px] rounded-2xl ${dest.bg} flex items-center justify-center shrink-0`}>
+                              <Icon className={`h-6 w-6 ${dest.color}`} strokeWidth={1.75} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[15px] font-semibold text-gray-900 leading-tight">{dest.label}</div>
+                              <div className="text-[13px] text-gray-500 mt-0.5">{dest.subtitle}</div>
+                            </div>
+                          </button>
+                        );
+                    })
+                  }
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* ── WHEN ── */}
+        {/* Divider 1 */}
+        <div className={`h-8 w-px shrink-0 transition-colors duration-150 ${div1 ? "bg-gray-200" : "bg-transparent"}`} />
+
+        {/* ══ WHEN — relative wrapper so dropdown anchors here ══ */}
+        <div className="relative flex-1 h-full">
           <button
             onClick={() => setActiveSection(activeSection === "when" ? null : "when")}
-            className={`flex flex-col justify-center px-6 rounded-full h-full flex-1 text-left transition-colors duration-150 ${
-              activeSection === "when"
-                ? "bg-white shadow-md"
-                : isActive
-                ? "hover:bg-gray-200/60"
-                : "hover:bg-gray-100"
+            className={`flex flex-col justify-center px-6 rounded-full h-full w-full text-left transition-colors duration-150 ${
+              activeSection === "when" ? "bg-white shadow-md" : isActive ? "hover:bg-gray-200/60" : "hover:bg-gray-100"
             }`}
           >
             <span className="text-xs font-bold text-gray-900">When</span>
-            <span className={`text-sm ${startDate ? "text-gray-900 font-medium" : "text-gray-400"}`}>
-              {dateSummary}
-            </span>
+            <span className={`text-sm ${startDate ? "text-gray-900 font-medium" : "text-gray-400"}`}>{dateSummary}</span>
           </button>
 
-          <div className={`h-8 w-px ${isActive && activeSection !== "when" && activeSection !== "who" ? "bg-transparent" : "bg-gray-200"}`} />
+          {activeSection === "when" && (
+            <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 z-50">
+              <div className="bg-white rounded-3xl shadow-[0_6px_20px_rgba(0,0,0,0.18)] p-6 w-[680px]">
+                {/* Toggle */}
+                <div className="flex justify-center mb-6">
+                  <div className="flex bg-gray-100 rounded-full p-1">
+                    {["dates", "flexible"].map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setCalendarMode(mode)}
+                        className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                          calendarMode === mode ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {mode === "dates" ? "Dates" : "Flexible"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-          {/* ── WHO + SEARCH BUTTON ── */}
+                {calendarMode === "dates" ? (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <button onClick={() => setCalMonthOffset((o) => Math.max(0, o - 1))} disabled={calMonthOffset === 0} className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors">
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setCalMonthOffset((o) => o + 1)} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex gap-8">
+                      <CalendarMonth year={leftYear}  month={leftMonth}  startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} />
+                      <CalendarMonth year={rightYear} month={rightMonth} startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} />
+                    </div>
+                    <div className="flex gap-2 mt-5 flex-wrap">
+                      {["Exact dates","± 1 day","± 2 days","± 3 days","± 7 days","± 14 days"].map((label) => (
+                        <button key={label} className="px-4 py-1.5 rounded-full border border-gray-300 text-xs font-semibold text-gray-700 hover:border-gray-900 transition-colors">{label}</button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 text-sm">Flexible date search coming soon</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Divider 2 */}
+        <div className={`h-8 w-px shrink-0 transition-colors duration-150 ${div2 ? "bg-gray-200" : "bg-transparent"}`} />
+
+        <div
+          className={`relative flex items-center h-full rounded-full transition-colors duration-150 ${
+            activeSection === "who"
+              ? "bg-white shadow-md"
+              : isActive ? "hover:bg-gray-200/60" : "hover:bg-gray-100"
+          }`}
+          onClick={() => setActiveSection(activeSection === "who" ? null : "who")}
+        >
+          {/* WHO button — no active bg here; handled by wrapper */}
           <button
-            onClick={() => setActiveSection(activeSection === "who" ? null : "who")}
-            className={`flex flex-col justify-center pl-6 pr-3 rounded-full h-full text-left transition-colors duration-150 ${
-              activeSection === "who"
-                ? "bg-white shadow-md"
-                : isActive
-                ? "hover:bg-gray-200/60"
-                : "hover:bg-gray-100"
-            }`}
-            style={{ minWidth: "200px" }}
+            className="flex flex-col justify-center pl-6 pr-3 h-full text-left"
+            style={{ minWidth: "160px" }}
           >
             <span className="text-xs font-bold text-gray-900">
-              {activeTab === "Services" ? "Type of services" : "Who"}
+              {activeTab === "Services" ? "Type of service" : "Who"}
             </span>
             <span className={`text-sm ${totalGuests > 0 ? "text-gray-900 font-medium" : "text-gray-400"}`}>
               {guestSummary}
             </span>
           </button>
 
-          {/* Search button */}
-          <div className="pr-3 shrink-0">
+          {/* SEARCH BUTTON — inside same wrapper as Who */}
+          <div className="pr-3 pl-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={() => setActiveSection(null)}
+              onClick={() => {
+                setAppliedSearch({ destination, startDate, endDate, guests });
+                setActiveSection(null);
+                if (compactSearchRef?.current) {
+                  // close expanded bar if we search from it
+                }
+              }}
               className={`flex items-center gap-2 rounded-full text-white font-semibold transition-all duration-200 ${
                 isActive
                   ? "bg-[#ff385c] hover:bg-[#e31c5f] px-5 py-3"
@@ -331,187 +421,41 @@ function SearchBar({
               {isActive && <span className="text-sm">Search</span>}
             </button>
           </div>
-        </div>
 
-        {/* ══ WHERE DROPDOWN ══ */}
-        {activeSection === "where" && (
-          <div className="absolute top-[72px] left-0 right-0 flex justify-start z-50">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-96">
-              {/* Input */}
-              <div className="relative mb-4">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  autoFocus
-                  type="text"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Search destinations"
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-gray-900 transition-colors"
-                />
-                {destination && (
-                  <button
-                    onClick={() => setDestination("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Suggestions */}
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                Suggested destinations
-              </div>
-              <div className="space-y-1">
-                {SUGGESTED_DESTINATIONS.filter(
-                  (d) =>
-                    !destination ||
-                    d.label.toLowerCase().includes(destination.toLowerCase())
-                ).map((dest) => (
-                  <button
-                    key={dest.label}
-                    onClick={() => {
-                      setDestination(dest.label === "I'm flexible" || dest.label === "Nearby" ? dest.label : dest.label);
-                      setActiveSection("when");
-                    }}
-                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-gray-100 transition-colors text-left"
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl shrink-0">
-                      {dest.icon}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-gray-900">{dest.label}</div>
-                      <div className="text-xs text-gray-400">{dest.sublabel}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══ WHEN DROPDOWN ══ */}
-        {activeSection === "when" && (
-          <div className="absolute top-[72px] left-1/2 -translate-x-1/2 z-50">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-[680px]">
-              {/* Dates / Flexible toggle */}
-              <div className="flex justify-center mb-6">
-                <div className="flex bg-gray-100 rounded-full p-1">
-                  {["dates", "flexible"].map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setCalendarMode(mode)}
-                      className={`px-5 py-2 rounded-full text-sm font-semibold transition-all capitalize ${
-                        calendarMode === mode
-                          ? "bg-white shadow text-gray-900"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      {mode === "dates" ? "Dates" : "Flexible"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {calendarMode === "dates" ? (
-                <>
-                  {/* Month navigation */}
-                  <div className="flex items-center justify-between mb-4">
-                    <button
-                      onClick={() => setCalMonthOffset((o) => Math.max(0, o - 1))}
-                      disabled={calMonthOffset === 0}
-                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setCalMonthOffset((o) => o + 1)}
-                      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* Two-month calendar */}
-                  <div className="flex gap-8">
-                    <CalendarMonth
-                      year={leftYear}
-                      month={leftMonth}
-                      startDate={startDate}
-                      endDate={endDate}
-                      onDayClick={handleDayClick}
-                      hoveredDay={hoveredDay}
-                      setHoveredDay={setHoveredDay}
-                    />
-                    <CalendarMonth
-                      year={rightYear}
-                      month={rightMonth}
-                      startDate={startDate}
-                      endDate={endDate}
-                      onDayClick={handleDayClick}
-                      hoveredDay={hoveredDay}
-                      setHoveredDay={setHoveredDay}
-                    />
-                  </div>
-
-                  {/* Duration chips */}
-                  <div className="flex gap-2 mt-5 flex-wrap">
-                    {["Exact dates", "± 1 day", "± 2 days", "± 3 days", "± 7 days", "± 14 days"].map((label) => (
+          {/* WHO / SERVICE DROPDOWN */}
+          {activeSection === "who" && (
+            <div className="absolute top-full mt-3 right-0 z-50" onClick={(e) => e.stopPropagation()}>
+              {activeTab === "Services" ? (
+                /* ── Service type picker ── */
+                <div className="bg-white rounded-3xl shadow-[0_6px_20px_rgba(0,0,0,0.18)] p-6 w-[480px]">
+                  <div className="flex flex-wrap gap-3">
+                    {SERVICES.map((svc) => (
                       <button
-                        key={label}
-                        className="px-4 py-1.5 rounded-full border border-gray-300 text-xs font-semibold text-gray-700 hover:border-gray-900 transition-colors"
+                        key={svc.id}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 hover:border-gray-400 text-sm font-medium text-gray-800 transition-all hover:shadow-sm active:scale-95"
                       >
-                        {label}
+                        <span className="text-base leading-none">{svc.icon}</span>
+                        <span>{svc.label}</span>
                       </button>
                     ))}
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  Flexible date search coming soon
+                /* ── Guest counter ── */
+                <div className="bg-white rounded-3xl shadow-[0_6px_20px_rgba(0,0,0,0.18)] p-6 w-80">
+                  <GuestCounter label="Adults"   sublabel="Ages 13 or above"           value={guests.adults}   onInc={() => incGuest("adults")}   onDec={() => decGuest("adults")} />
+                  <GuestCounter label="Children" sublabel="Ages 2–12"                  value={guests.children} onInc={() => incGuest("children")} onDec={() => decGuest("children")} />
+                  <GuestCounter label="Infants"  sublabel="Under 2"                    value={guests.infants}  onInc={() => incGuest("infants")}  onDec={() => decGuest("infants")} />
+                  <GuestCounter label="Pets"     sublabel="Bringing a service animal?" value={guests.pets}     onInc={() => incGuest("pets")}     onDec={() => decGuest("pets")} />
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ══ WHO DROPDOWN ══ */}
-        {activeSection === "who" && (
-          <div className="absolute top-[72px] right-0 z-50">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-80">
-              <GuestCounter
-                label="Adults"
-                sublabel="Ages 13 or above"
-                value={guests.adults}
-                onInc={() => incGuest("adults")}
-                onDec={() => decGuest("adults")}
-              />
-              <GuestCounter
-                label="Children"
-                sublabel="Ages 2–12"
-                value={guests.children}
-                onInc={() => incGuest("children")}
-                onDec={() => decGuest("children")}
-              />
-              <GuestCounter
-                label="Infants"
-                sublabel="Under 2"
-                value={guests.infants}
-                onInc={() => incGuest("infants")}
-                onDec={() => decGuest("infants")}
-              />
-              <GuestCounter
-                label="Pets"
-                sublabel="Bringing a service animal?"
-                value={guests.pets}
-                onInc={() => incGuest("pets")}
-                onDec={() => decGuest("pets")}
-              />
-            </div>
-          </div>
-        )}
+
       </div>
-    </>
+    </div>
   );
 }
 

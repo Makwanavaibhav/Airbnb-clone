@@ -70,23 +70,96 @@ function CitySection({ cityKey, title }) {
 }
 
 // ─── Main listing page ────────────────────────────────────────────────────────
-function Cards() {
+import { useSearch } from "../../context/SearchContext.jsx";
+
+function Cards({ activeTab }) {
+  const { appliedSearch } = useSearch();
+  const searchDest = (appliedSearch?.destination || "").toLowerCase();
+
+  const CITY_ROUTES = [
+    { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "rajasthan"] },
+    { key: "goa", title: "Top Picks in Goa", match: ["goa", "north goa"] },
+    { key: "mumbai", title: "Places to stay in Mumbai", match: ["mumbai", "maharashtra"] },
+  ];
+
+  // If searchDest is empty or contains "nearby", show all.
+  // Otherwise, check if any match keyword is in searchDest, or vice versa
+  const showAll = !searchDest || searchDest.includes("nearby") || searchDest.includes("anywhere");
+  
+  const filteredRoutes = showAll
+    ? CITY_ROUTES
+    : CITY_ROUTES.filter((r) => 
+        r.match.some((kw) => searchDest.includes(kw) || kw.includes(searchDest)) || 
+        r.title.toLowerCase().includes(searchDest)
+      );
+
+  // Styling block
+  const sharedStyles = (
+    <style>{`
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        scroll-behavior: smooth;
+        padding: 10px 5px;
+        margin: -10px -5px;
+      }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+    `}</style>
+  );
+
+  // 1. Experiences Tab
+  if (activeTab === "Experiences") {
+    return (
+      <div className="w-full px-6 py-20 text-center">
+        <h2 className="text-3xl font-semibold mb-3 dark:text-white">Experiences coming soon</h2>
+        <p className="text-gray-500 max-w-md mx-auto">
+          We're partnering with local guides in {appliedSearch?.destination || "your area"} to bring you unforgettable activities.
+        </p>
+        {sharedStyles}
+      </div>
+    );
+  }
+
+  // 2. Services Tab
+  if (activeTab === "Services") {
+    return (
+      <div className="w-full px-6 py-20 text-center">
+        <h2 className="text-3xl font-semibold mb-3 dark:text-white">Services in {appliedSearch?.destination || "your area"}</h2>
+        <p className="text-gray-500 max-w-md mx-auto">
+          From private chefs to daily housekeeping, professional services are coming to Airbnb.
+        </p>
+        <div className="flex justify-center gap-4 mt-8 opacity-60">
+          <span className="text-4xl">👨‍🍳</span>
+          <span className="text-4xl">💆</span>
+          <span className="text-4xl">📸</span>
+        </div>
+        {sharedStyles}
+      </div>
+    );
+  }
+
+  // 3. Default Homes Tab
   return (
     <div className="w-full px-6 py-8">
-      <CitySection cityKey="udaipur" title="Popular homes in Udaipur" />
-      <CitySection cityKey="goa"     title="Top Picks in Goa" />
-      <CitySection cityKey="mumbai"  title="Places to stay in Mumbai" />
-
-      <style>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-          scroll-behavior: smooth;
-          padding: 10px 5px;
-          margin: -10px -5px;
-        }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-      `}</style>
+      {filteredRoutes.length > 0 ? (
+        filteredRoutes.map((route) => (
+          <CitySection key={route.key} cityKey={route.key} title={route.title} />
+        ))
+      ) : (
+        <div className="text-center py-20 px-4">
+          <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">No exact matches in our seed DB</h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Try searching for "Udaipur", "Mumbai", or "Goa".
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-6 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            Clear Search
+          </button>
+        </div>
+      )}
+      {sharedStyles}
     </div>
   );
 }
