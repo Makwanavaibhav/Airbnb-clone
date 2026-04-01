@@ -7,6 +7,27 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { fetchHotelById } from '../../services/api';
 
+// A robust self-healing image loader to bypass AWS S3 strict casing errors
+function S3Image({ src, alt, className }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+  }, [src]);
+
+  const handleError = () => {
+    if (!hasError && imgSrc) {
+      setHasError(true);
+      if (imgSrc.includes('/hotel-')) setImgSrc(imgSrc.replace('/hotel-', '/Hotel-'));
+      else if (imgSrc.includes('/Hotel-')) setImgSrc(imgSrc.replace('/Hotel-', '/hotel-'));
+    }
+  };
+
+  return <img src={imgSrc} onError={handleError} alt={alt} className={className} />;
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function DetailSkeleton() {
   return (
@@ -109,19 +130,19 @@ const HotelDetails = () => {
       {/* 5-Image Gallery Grid */}
       <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[460px] rounded-xl overflow-hidden mb-12">
         <div className="col-span-2 row-span-2">
-          <img src={data.image} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.image} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <img src={data.image} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.image} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <img src={data.image} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.image} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <img src={data.image} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.image} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1 relative">
-          <img src={data.image} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.image} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
           <button className="absolute bottom-4 right-4 bg-white border border-black px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2">
             Show all photos
           </button>

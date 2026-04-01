@@ -5,11 +5,29 @@ import { Link } from "react-router-dom";
 
 export function HotelCard({ hotel }) {
   const [isFavorite, setIsFavorite] = React.useState(false);
+  const [imgSrc, setImgSrc] = React.useState(hotel.image);
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgSrc(hotel.image);
+    setHasError(false);
+  }, [hotel.image]);
 
   const handleHeartClick = (e) => {
-    e.preventDefault(); // Prevent navigating when clicking heart
+    e.preventDefault(); 
     e.stopPropagation();
     setIsFavorite(!isFavorite);
+  };
+
+  const handleError = () => {
+    if (!hasError && imgSrc) {
+      setHasError(true);
+      if (imgSrc.includes('/hotel-')) {
+        setImgSrc(imgSrc.replace('/hotel-', '/Hotel-'));
+      } else if (imgSrc.includes('/Hotel-')) {
+        setImgSrc(imgSrc.replace('/Hotel-', '/hotel-'));
+      }
+    }
   };
 
   return (
@@ -17,7 +35,8 @@ export function HotelCard({ hotel }) {
       {/* Image container - Exact square */}
       <div className="relative aspect-square overflow-hidden rounded-xl">
         <img 
-          src={hotel.image} 
+          src={imgSrc} 
+          onError={handleError}
           alt={hotel.title} 
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-300"
         />
