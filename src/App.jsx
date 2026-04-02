@@ -1,7 +1,7 @@
 import Cards from "../src/components/Cards/hotels.jsx";
 import Header from "./components/Header/Header.jsx";
 import Footer from "./components/Footer/Footer.jsx";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HotelDetails from "./components/Cards/HotelDetails.jsx";
 import Login from "./pages/Auth/Login.jsx";
@@ -22,6 +22,18 @@ function MainLayout({ children, activeTab, setActiveTab }) {
 
 function App() {
   const [activtab, setActivtab] = useState("Homes");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("booking_success")) {
+      alert("Booking confirmed successfully! Have a great trip.");
+      window.history.replaceState({}, document.title, "/");
+    }
+    if (params.get("booking_error")) {
+      alert("There was an issue processing your booking.");
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, []);
 
   return (
     <BrowserRouter>

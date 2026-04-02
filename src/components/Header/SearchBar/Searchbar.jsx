@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Search, X, ChevronLeft, ChevronRight, Minus, Plus, MapPin,
-  Navigation, Building2, Palmtree, Landmark, Trees, Compass,
+  Navigation, Building2, Palmtree, Landmark, Trees, Compass, Calendar
 } from "lucide-react";
 import { useSearch } from "../../../context/SearchContext.jsx";
 
@@ -117,6 +117,8 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
   const [calendarMode, setCalendarMode]     = useState("dates");
   const [hoveredDay, setHoveredDay]         = useState(null);
   const [calMonthOffset, setCalMonthOffset] = useState(0);
+  const [stayLength, setStayLength]         = useState("Weekend");
+  const [flexibleMonths, setFlexibleMonths] = useState([]);
 
   const wrapperRef = useRef(null);
   const inputRef   = useRef(null);
@@ -370,7 +372,49 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
                     </div>
                   </>
                 ) : (
-                  <div className="text-center py-8 text-gray-500 text-sm">Flexible date search coming soon</div>
+                  <div className="flex flex-col items-center w-full px-6 py-2">
+                    <h3 className="text-[17px] font-semibold mb-4 text-gray-800">How long would you like to stay?</h3>
+                    <div className="flex gap-3 mb-8">
+                      {["Weekend", "Week", "Month"].map(type => (
+                        <button 
+                          key={type}
+                          onClick={() => setStayLength(type)}
+                          className={`px-5 py-2 rounded-full border ${stayLength === type ? 'border-gray-900 bg-gray-50 shadow-sm' : 'border-gray-300 hover:border-gray-900'} text-sm font-light transition-colors`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+
+                    <h3 className="text-[17px] font-semibold mb-4 text-gray-800">When do you want to go?</h3>
+                    <div className="w-full relative flex items-center group">
+                      <div className="flex gap-4 overflow-x-auto snap-x py-2 px-1 w-full hide-scrollbar" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                        {[...Array(12)].map((_, i) => {
+                          const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+                          const monthStr = `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+                          const isSelected = flexibleMonths.includes(monthStr);
+                          return (
+                            <button
+                              key={monthStr}
+                              onClick={() => {
+                                setFlexibleMonths(prev => 
+                                  prev.includes(monthStr) ? prev.filter(m => m !== monthStr) : [...prev, monthStr]
+                                );
+                              }}
+                              className={`flex flex-col items-center justify-center snap-start shrink-0 w-[120px] h-[130px] rounded-2xl border ${isSelected ? 'border-gray-900 bg-gray-50 border-2' : 'border-gray-200 hover:border-gray-900'} transition-all`}
+                            >
+                              <Calendar className="w-8 h-8 mb-3 text-gray-400" strokeWidth={1.5} />
+                              <span className="text-[15px] font-semibold text-gray-900">{MONTH_NAMES[date.getMonth()]}</span>
+                              <span className="text-[13px] text-gray-500">{date.getFullYear()}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button className="absolute -right-4 bg-white border border-gray-200 shadow-md rounded-full w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:scale-105 transition-all opacity-0 group-hover:opacity-100 z-10">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

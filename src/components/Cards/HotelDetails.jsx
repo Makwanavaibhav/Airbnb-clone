@@ -3,9 +3,68 @@ import { useParams } from 'react-router-dom';
 import { FiShare, FiHeart, FiStar } from 'react-icons/fi';
 import { BsCheckCircle } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { fetchHotelById } from '../../services/api';
+
+// ─── Calendar helpers ─────────────────────────────────────────────────────────
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const getDaysInMonth     = (y, m) => new Date(y, m + 1, 0).getDate();
+const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
+function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay, setHoveredDay }) {
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay    = getFirstDayOfMonth(year, month);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="text-center font-semibold text-gray-900 dark:text-gray-100 mb-4 text-sm">{MONTH_NAMES[month]} {year}</div>
+      <div className="grid grid-cols-7 gap-0 text-center">
+        {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+          <div key={d} className="text-xs font-semibold text-gray-400 py-1">{d}</div>
+        ))}
+        {cells.map((day, idx) => {
+          if (!day) return <div key={`e-${idx}`} />;
+          const date = new Date(year, month, day); date.setHours(0, 0, 0, 0);
+          const isPast    = date < today;
+          const isStart   = startDate && date.getTime() === startDate.getTime();
+          const isEnd     = endDate   && date.getTime() === endDate.getTime();
+          const isInRange = startDate && (endDate || hoveredDay) && date > startDate && date < (hoveredDay && !endDate ? hoveredDay : endDate);
+          return (
+            <button
+              key={day}
+              disabled={isPast}
+              onClick={() => !isPast && onDayClick(date)}
+              onMouseEnter={() => !isPast && startDate && !endDate && setHoveredDay(date)}
+              onMouseLeave={() => setHoveredDay(null)}
+              className={[
+                "relative h-9 w-full text-sm font-medium rounded-full transition-all",
+                isPast ? "text-gray-300 dark:text-gray-600 cursor-not-allowed" : "cursor-pointer text-gray-900 dark:text-gray-100",
+                isStart || isEnd ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 z-10" : "",
+                isInRange ? "bg-rose-50 dark:bg-rose-900/30 rounded-none text-gray-900 dark:text-gray-100" : "",
+                !isPast && !isStart && !isEnd ? "hover:bg-gray-100 dark:hover:bg-gray-800" : "",
+              ].join(" ")}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mock Reviews ──────────────────────────────────────────────────────────────
+const MOCK_REVIEWS = [
+  { id: 1, name: "John Doe", date: "March 2026", rating: 5, text: "Amazing stay! The place was exactly as described and the host was very responsive. The view from the balcony is breathtaking.", avatar: "https://i.pravatar.cc/150?u=1" },
+  { id: 2, name: "Sarah Smith", date: "February 2026", rating: 4, text: "Great location, close to all the main attractions. The apartment was clean and comfortable. A wonderful experience.", avatar: "https://i.pravatar.cc/150?u=2" },
+  { id: 3, name: "Michael Johnson", date: "January 2026", rating: 5, text: "Absolutely loved it! The amenities were top-notch and the bed was super comfy. Would definitely book again.", avatar: "https://i.pravatar.cc/150?u=3" },
+  { id: 4, name: "Emily Davis", date: "December 2025", rating: 5, text: "A true hidden gem. We had such a relaxing time here. The kitchen was well-stocked and we enjoyed making dinners.", avatar: "https://i.pravatar.cc/150?u=4" }
+];
 
 // A robust self-healing image loader to bypass AWS S3 strict casing errors
 function S3Image({ src, alt, className }) {
@@ -58,6 +117,15 @@ const HotelDetails = () => {
   const [error, setError] = useState(null);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [isReserving, setIsReserving] = useState(false);
+  const [bookingError, setBookingError] = useState(null);
+  
+  // Custom DatePicker states
+  const [calendarMode, setCalendarMode]     = useState("dates");
+  const [hoveredDay, setHoveredDay]         = useState(null);
+  const [calMonthOffset, setCalMonthOffset] = useState(0);
+  const [stayLength, setStayLength]         = useState("Weekend");
+  const [flexibleMonths, setFlexibleMonths] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +149,20 @@ const HotelDetails = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+  const handleDayClick = (date) => {
+    setBookingError(null);
+    if (!startDate || (startDate && endDate)) { setStartDate(date); setEndDate(null); }
+    else if (date > startDate) { setEndDate(date); }
+    else { setStartDate(date); setEndDate(null); }
+  };
+
+  const today         = new Date();
+  const leftMonth     = (today.getMonth() + calMonthOffset) % 12;
+  const leftYear      = today.getFullYear() + Math.floor((today.getMonth() + calMonthOffset) / 12);
+  const rightMonthRaw = leftMonth + 1;
+  const rightMonth    = rightMonthRaw % 12;
+  const rightYear     = rightMonthRaw > 11 ? leftYear + 1 : leftYear;
+
   if (loading) return <DetailSkeleton />;
 
   if (error) {
@@ -103,6 +185,43 @@ const HotelDetails = () => {
   const totalPrice = data.priceRaw * days;
   const serviceFee = Math.round(totalPrice * 0.14);
   const total = totalPrice + serviceFee;
+
+  const handleReserve = async () => {
+    if (!startDate || !endDate) {
+      setBookingError("Please select check-in and checkout dates.");
+      return;
+    }
+    setBookingError(null);
+    setIsReserving(true);
+
+    try {
+      const response = await fetch("http://localhost:5001/api/bookings/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hotelId: data.id,
+          hotelName: data.title,
+          hotelImage: data.image,
+          startDate: startDate,
+          endDate: endDate,
+          totalDays: days,
+          totalPrice: total,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || "Failed to initiate booking");
+      }
+
+      if (resData.url) {
+        window.location.href = resData.url;
+      }
+    } catch (err) {
+      setBookingError(err.message);
+      setIsReserving(false);
+    }
+  };
 
   return (
     <div className="max-w-[1120px] mx-auto px-6 pt-6 pb-24 text-gray-900 dark:text-gray-100">
@@ -211,6 +330,120 @@ const HotelDetails = () => {
               </div>
             </div>
           )}
+
+          {/* Permanent Date Picker Section */}
+          <div className="py-8 border-t dark:border-gray-700">
+            <h2 className="text-[22px] font-semibold mb-1">Select checkout date</h2>
+            <p className="text-[15px] font-light text-gray-500 mb-6">Add your travel dates for exact pricing</p>
+
+            <div className="w-full">
+              <div className="flex justify-start mb-6">
+                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1">
+                  {["dates", "flexible"].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setCalendarMode(mode)}
+                      className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                        calendarMode === mode ? "bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      }`}
+                    >
+                      {mode === "dates" ? "Dates" : "Flexible"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {calendarMode === "dates" ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <button onClick={() => setCalMonthOffset((o) => Math.max(0, o - 1))} disabled={calMonthOffset === 0} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 transition-colors">
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => setCalMonthOffset((o) => o + 1)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex gap-8">
+                    <CalendarMonth year={leftYear}  month={leftMonth}  startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} />
+                    <CalendarMonth year={rightYear} month={rightMonth} startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} />
+                  </div>
+                  <div className="flex gap-2 mt-5 flex-wrap">
+                    {["Exact dates","± 1 day","± 2 days","± 3 days","± 7 days","± 14 days"].map((label) => (
+                      <button key={label} className="px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:border-gray-900 dark:hover:border-gray-400 transition-colors">{label}</button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-start w-full py-2">
+                  <h3 className="text-[17px] font-semibold mb-4 text-gray-800 dark:text-gray-200">How long would you like to stay?</h3>
+                  <div className="flex gap-3 mb-8">
+                    {["Weekend", "Week", "Month"].map(type => (
+                      <button 
+                        key={type}
+                        onClick={() => setStayLength(type)}
+                        className={`px-5 py-2 rounded-full border ${stayLength === type ? 'border-gray-900 dark:border-gray-100 bg-gray-50 dark:bg-gray-800 shadow-sm' : 'border-gray-300 dark:border-gray-600 hover:border-gray-900 dark:hover:border-gray-400'} text-sm font-light transition-colors`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+
+                  <h3 className="text-[17px] font-semibold mb-4 text-gray-800 dark:text-gray-200">When do you want to go?</h3>
+                  <div className="w-full relative flex items-center group">
+                    <div className="flex gap-4 overflow-x-auto snap-x py-2 px-1 w-full hide-scrollbar" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                      {[...Array(12)].map((_, i) => {
+                        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+                        const monthStr = `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+                        const isSelected = flexibleMonths.includes(monthStr);
+                        return (
+                          <button
+                            key={monthStr}
+                            onClick={() => {
+                              setFlexibleMonths(prev => 
+                                prev.includes(monthStr) ? prev.filter(m => m !== monthStr) : [...prev, monthStr]
+                              );
+                            }}
+                            className={`flex flex-col items-center justify-center snap-start shrink-0 w-[120px] h-[130px] rounded-2xl border ${isSelected ? 'border-gray-900 dark:border-gray-100 bg-gray-50 dark:bg-gray-800 border-2' : 'border-gray-200 dark:border-gray-700 hover:border-gray-900 dark:hover:border-gray-400'} transition-all`}
+                          >
+                            <Calendar className="w-8 h-8 mb-3 text-gray-400" strokeWidth={1.5} />
+                            <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">{MONTH_NAMES[date.getMonth()]}</span>
+                            <span className="text-[13px] text-gray-500">{date.getFullYear()}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mock Reviews Section */}
+          <div className="py-8 border-t">
+            <div className="flex items-center gap-2 mb-8">
+              <FiStar className="fill-current w-6 h-6" />
+              <h2 className="text-[22px] font-semibold">4.8 · {MOCK_REVIEWS.length} reviews</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-x-12 gap-y-10">
+              {MOCK_REVIEWS.map(review => (
+                <div key={review.id}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <img src={review.avatar} alt={review.name} className="w-12 h-12 rounded-full object-cover" />
+                    <div>
+                      <div className="font-semibold text-[16px]">{review.name}</div>
+                      <div className="text-[14px] text-gray-500">{review.date}</div>
+                    </div>
+                  </div>
+                  <p className="text-[16px] text-gray-800 dark:text-gray-200 font-light leading-relaxed">
+                    {review.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <button className="mt-8 px-6 py-3 border border-gray-900 dark:border-gray-100 rounded-lg text-[16px] font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              Show all {MOCK_REVIEWS.length} reviews
+            </button>
+          </div>
         </div>
 
         {/* Right Column - Sticky Reservation Card */}
@@ -222,41 +455,47 @@ const HotelDetails = () => {
             </div>
 
             {/* Date Picker Input */}
-            <div className="border border-gray-400 dark:border-gray-600 rounded-lg overflow-hidden mb-4">
+            <div className="border border-gray-400 dark:border-gray-600 rounded-lg mb-4">
               <div className="flex border-b border-gray-400 dark:border-gray-600">
-                <div className="w-1/2 p-3 border-r border-gray-400 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                <div className="w-1/2 p-3 border-r border-gray-400 dark:border-gray-600 rounded-tl-lg">
                   <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Check-in</div>
-                  <DatePicker
-                    selected={startDate}
-                    onChange={(date) => setStartDate(date)}
-                    selectsStart startDate={startDate} endDate={endDate}
-                    placeholderText="Add date"
-                    className="w-full outline-none bg-transparent text-sm text-gray-700 dark:text-gray-300"
-                  />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    {startDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)}` : "Add date"}
+                  </div>
                 </div>
-                <div className="w-1/2 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                <div className="w-1/2 p-3 rounded-tr-lg">
                   <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Checkout</div>
-                  <DatePicker
-                    selected={endDate}
-                    onChange={(date) => setEndDate(date)}
-                    selectsEnd startDate={startDate} endDate={endDate} minDate={startDate}
-                    placeholderText="Add date"
-                    className="w-full outline-none bg-transparent text-sm text-gray-700 dark:text-gray-300"
-                  />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    {endDate ? `${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add date"}
+                  </div>
                 </div>
               </div>
-              <div className="p-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+              <div className="p-3 w-full rounded-b-lg">
                 <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Guests</div>
                 <div className="text-sm text-gray-700 dark:text-gray-300">1 guest</div>
               </div>
             </div>
 
-            <button className="w-full bg-[#FF385C] hover:bg-[#d90b63] text-white font-semibold py-3.5 rounded-lg transition text-[16px] mb-4">
-              Reserve
+            <button 
+              onClick={handleReserve}
+              disabled={isReserving}
+              className={`w-full ${isReserving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF385C] hover:bg-[#d90b63]'} text-white font-semibold py-3.5 rounded-lg transition text-[16px] mb-4 flex justify-center items-center gap-2`}
+            >
+              {isReserving && (
+                <div className="w-5 h-5 border-2 border-t-white border-transparent rounded-full animate-spin"></div>
+              )}
+              {isReserving ? 'Reserving...' : 'Reserve'}
             </button>
-            <div className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6 font-light">
-              You won't be charged yet
-            </div>
+            {bookingError && (
+              <div className="text-center text-sm text-red-500 mb-4 font-medium px-2 bg-red-50 py-2 rounded-lg border border-red-100">
+                {bookingError}
+              </div>
+            )}
+            {!bookingError && (
+              <div className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6 font-light">
+                You won't be charged yet
+              </div>
+            )}
 
             {/* Pricing Breakdown */}
             <div className="space-y-4 mb-6">
