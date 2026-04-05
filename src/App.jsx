@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HotelDetails from "./components/Cards/HotelDetails.jsx";
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 // Create a layout component to share Header and Footer
 function MainLayout({ children, activeTab, setActiveTab }) {
@@ -36,26 +37,28 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={
-          <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-            <Cards activeTab={activtab} />
-          </MainLayout>
-        } />
-        
-        {/* Detail Route */}
-        <Route path="/hotel/:id" element={
-          <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-            <HotelDetails />
-          </MainLayout>
-        } />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={
+            <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+              <Cards activeTab={activtab} />
+            </MainLayout>
+          } />
+          
+          {/* Detail Route */}
+          <Route path="/hotel/:id" element={
+            <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+              <HotelDetails />
+            </MainLayout>
+          } />
 
-        {/* Auth Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Auth Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

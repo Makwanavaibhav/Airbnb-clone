@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -27,7 +29,63 @@ async function connectDB() {
   console.log("✅  Connected to MongoDB Atlas (hotelsdb)");
 }
 
+// ─── Auth Middleware ─────────────────────────────────────────────────────────
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: "Access denied. Please log in to continue." });
+
+  jwt.verify(token, process.env.JWT_SECRET || "default_secret", (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token. Please log in again." });
+    req.user = user;
+    next();
+  });
+};
+
 // ─── Routes ──────────────────────────────────────────────────────────────────
+
+// POST /api/auth/register
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { firstName, lastName, dateOfBirth, email, password } = req.body;
+    if (!firstName || !lastName || !email || !password || !dateOfBirth) {
+      return res.status(400).json({ error: "Please fill in all fields." });
+    }
+    const existingUser = await db.collection("users").findOne({ email });
+    if (existingUser) return res.status(400).json({ error: "Email already registered." });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const result = await db.collection("users").insertOne({
+      firstName, lastName, dateOfBirth, email, password: hashedPassword, createdAt: new Date()
+    });
+    res.status(201).json({ message: "User registered successfully", userId: result.insertedId });
+  } catch (err) {
+    console.error("Register Error:", err);
+    res.status(500).json({ error: "Failed to register user." });
+  }
+});
+
+// POST /api/auth/login
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Please provide email and password." });
+
+    const user = await db.collection("users").findOne({ email });
+    if (!user) return res.status(400).json({ error: "Invalid credentials." });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: "Invalid credentials." });
+
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET || "default_secret", { expiresIn: "7d" });
+    res.json({ token, user: { firstName: user.firstName, lastName: user.lastName, email: user.email } });
+  } catch (err) {
+    console.error("Login Error:", err);
+    res.status(500).json({ error: "Failed to login." });
+  }
+});
 
 // GET /api/hotels — all hotels
 app.get("/api/hotels", async (req, res) => {
@@ -76,7 +134,7 @@ app.get("/api/hotels/:id", async (req, res) => {
 });
 
 // ─── Bookings & Stripe ────────────────────────────────────────────────────────
-app.post("/api/bookings/checkout", async (req, res) => {
+app.post("/api/bookings/checkout", authenticateToken, async (req, res) => {
   try {
     const { hotelId, startDate, endDate, totalPrice, totalDays, hotelName, hotelImage } = req.body;
 

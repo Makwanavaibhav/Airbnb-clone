@@ -197,7 +197,10 @@ const HotelDetails = () => {
     try {
       const response = await fetch("http://localhost:5001/api/bookings/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({
           hotelId: data.id,
           hotelName: data.title,

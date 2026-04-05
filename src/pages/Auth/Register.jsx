@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -15,7 +15,9 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.dateOfBirth) {
       setError("Please fill in all fields.");
@@ -26,7 +28,20 @@ const Register = () => {
       return;
     }
     setError("");
-    console.log("Registering with:", formData);
+    
+    try {
+      const response = await fetch("http://localhost:5001/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Registration failed");
+      
+      navigate("/login");
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (

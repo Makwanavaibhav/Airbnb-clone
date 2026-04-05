@@ -91,7 +91,7 @@ function DesktopHeader({ activeTab, setActiveTab }) {
             >
               <Globe size={18} className="text-gray-900 dark:text-gray-100" />
             </button>
-            <UserMenu />
+            <UserMenu onOpenLanguageModal={() => setOpenLanguageModal(true)} />
           </div>
         </div>
       </div>

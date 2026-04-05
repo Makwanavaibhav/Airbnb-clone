@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Phone, 
   Mail, 
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 
 const AuthModal = ({ isOpen, onClose, isTransparent }) => {
+  const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [countryCode, setCountryCode] = useState('+91');
 
@@ -92,11 +94,13 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
           </p>
 
           <Button
-            onClick={() => console.log(countryCode + phoneNumber)}
+            onClick={() => {
+              onClose();
+              navigate("/login");
+            }}
             className="w-full h-12 mt-4 bg-[#E01561] hover:bg-[#D70466] text-white font-semibold rounded-lg"
-            disabled={!phoneNumber}
           >
-            Continue
+            Continue with email instead
           </Button>
 
           {/* Separator */}
@@ -115,6 +119,14 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
               <Button
                 key={button.label}
                 variant="outline"
+                onClick={() => {
+                  if (button.provider === 'email') {
+                    onClose();
+                    navigate("/login");
+                  } else {
+                    console.log(`Connecting to ${button.provider}...`);
+                  }
+                }}
                 className="w-full h-12 justify-between px-6 border-gray-900 hover:bg-gray-50 rounded-lg text-sm font-semibold"
               >
                 <button.icon className="h-5 w-5" />

@@ -1,13 +1,35 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login with:", email, password);
+    setError("");
+
+    try {
+      const response = await fetch("http://localhost:5001/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Login failed");
+      
+      // Call the global login context
+      login(data.token);
+      // Return to the homepage interactively
+      navigate('/');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -61,6 +83,13 @@ const Login = () => {
               We'll call or text you to confirm your number. Standard message and data rates apply. <span className="font-semibold underline cursor-pointer">Privacy Policy</span>
             </p>
 
+            {error && (
+              <div className="flex items-center gap-2 text-[#C13515] text-[12px] mt-3">
+                 <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="presentation" focusable="false" className="block h-4 w-4 fill-current"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm0 1.2a6.8 6.8 0 1 0 0 13.6A6.8 6.8 0 0 0 8 1.2zM8.7 10v2.24H7.3V10h1.4zm0-6v4.6H7.3V4h1.4z"></path></svg>
+                 <span>{error}</span>
+              </div>
+            )}
+            
             <button
               type="submit"
               className="mt-4 w-full flex justify-center py-3.5 border border-transparent rounded-lg text-[16px] font-semibold text-white bg-airbnb hover:bg-[#d90b63] transition duration-200"
