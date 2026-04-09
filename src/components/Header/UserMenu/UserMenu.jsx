@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger 
 } from "../../ui/dropdown-menu.jsx";
 import Host from "../../../assets/logo/host.png";
-import AuthModal from "./Becomehost.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 
 const AirbnbIcon = ({ className }) => (
@@ -21,17 +20,10 @@ const AirbnbIcon = ({ className }) => (
 
 const UserMenu = ({ onOpenLanguageModal }) => {
   const navigate = useNavigate();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isTransparent, setIsTransparent] = useState(false);
   const { isLoggedIn, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
-  };
-
-  const openModal = (transparent = false) => {
-    setIsTransparent(transparent);
-    setIsAuthModalOpen(true);
   };
 
   return (
@@ -109,7 +101,7 @@ const UserMenu = ({ onOpenLanguageModal }) => {
               <DropdownMenuSeparator className="my-2" />
 
               {/* Section 3 (host) */}
-              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => openModal(false)}>
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/login")}>
                 <div className="flex items-start gap-3 w-full">
                   <div className="flex-1">
                     <span className="font-medium text-gray-900 block">Become a host</span>
@@ -152,7 +144,7 @@ const UserMenu = ({ onOpenLanguageModal }) => {
 
               <DropdownMenuItem 
                 className="py-3 cursor-pointer"
-                onClick={() => openModal(false)}
+                onClick={() => navigate("/login")}
               >
                 <div className="flex items-start gap-3 w-full">
                   <div className="flex-1">
@@ -167,11 +159,11 @@ const UserMenu = ({ onOpenLanguageModal }) => {
 
               <DropdownMenuSeparator className="my-2" />
 
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/login")}>
                 <span>Refer a Host</span>
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/login")}>
                 <span>Find a co-host</span>
               </DropdownMenuItem>
 
@@ -190,12 +182,6 @@ const UserMenu = ({ onOpenLanguageModal }) => {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        isTransparent={isTransparent}
-      />
     </>
   );
 };

@@ -3,8 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import House from "../../../assets/logo/house.png";
 import Experiences from "../../../assets/logo/Experience.png";
 import Services from "../../../assets/logo/Services.png";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 function HostDialog({ selectedHostType, setSelectedHostType }) {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+  
   const hostOptions = [
     { id: "home", label: "Home", icon: House, description: "Rent out your property" },
     { id: "experience", label: "Experience", icon: Experiences, description: "Host activities and tours" },
@@ -12,7 +17,11 @@ function HostDialog({ selectedHostType, setSelectedHostType }) {
   ];
 
   const handleNext = () => {
-    console.log("Selected:", selectedHostType);
+    if (!isLoggedIn) {
+      navigate('/login');
+    } else {
+      console.log("Selected:", selectedHostType);
+    }
   };
 
   return (

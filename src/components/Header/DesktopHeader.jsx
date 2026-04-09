@@ -3,7 +3,6 @@ import LongLogo from "../../assets/logo/long-logo.png";
 import { Globe, Menu, User } from "lucide-react";
 import LocaleModal from "../Header/LocaleModal/LocalModal.jsx";
 import NavItems from "../Header/NavItems/NavItems.jsx";
-import ThemeToggle from "../Header/ThemeToggle/ThemeToggle.jsx";
 import SearchBar from "../Header/SearchBar/Searchbar.jsx";
 import HostDialog from "../Header/HostDialog/HostDialog.jsx";
 import UserMenu from "../Header/UserMenu/UserMenu.jsx";
@@ -15,19 +14,10 @@ function DesktopHeader({ activeTab, setActiveTab }) {
   const [selectedCurrency, setSelectedCurrency] = useState("USD - $");
   const [translateEnabled, setTranslateEnabled] = useState(true);
   const [activeLocaleTab, setActiveLocaleTab] = useState("language");
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
   const searchRef = useRef(null);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDarkMode]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -84,7 +74,6 @@ function DesktopHeader({ activeTab, setActiveTab }) {
                 setSelectedHostType={setSelectedHostType}
               />
             </div>
-            <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
             <button
               onClick={() => setOpenLanguageModal(true)}
               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent dark:border-gray-700"
