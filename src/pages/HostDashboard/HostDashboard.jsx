@@ -4,6 +4,7 @@ import { ArrowLeft, Home, MapPin, IndianRupee, ImagePlus, Loader2, Menu } from "
 import { useAuth } from "../../context/AuthContext.jsx";
 import LongLogo from "../../assets/logo/long-logo.png";
 import ListingCreationWizard from "./ListingCreationWizard.jsx";
+import UserMenu from "../../components/Header/UserMenu/UserMenu.jsx";
 
 const HostDashboard = () => {
   const navigate = useNavigate();
@@ -54,13 +55,11 @@ const HostDashboard = () => {
           >
             Switch to travelling
           </button>
-          <div className="flex items-center gap-3 relative mr-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
               V
             </div>
-            <button className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:shadow-sm transition-all text-gray-500">
-              <Menu className="w-4 h-4" />
-            </button>
+            <UserMenu />
           </div>
         </div>
       </div>

@@ -1,10 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { FiShare, FiHeart, FiStar } from 'react-icons/fi';
 import { BsCheckCircle } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchHotelById } from '../../services/api';
+
+// ─── GuestCounter ─────────────────────────────────────────────────────────────
+function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0, max = 10 }) {
+  return (
+    <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <div>
+        <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{label}</div>
+        <div className="text-xs text-gray-500">{sublabel}</div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onDec} disabled={value <= min}
+          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+            value <= min ? "border-gray-200 text-gray-200 cursor-not-allowed dark:border-gray-700 dark:text-gray-600" : "border-gray-400 text-gray-600 hover:border-gray-900 dark:text-gray-300 dark:hover:border-gray-100"
+          }`}
+        >
+          <Minus className="h-3 w-3" />
+        </button>
+        <span className="w-5 text-center font-semibold text-sm">{value}</span>
+        <button 
+          onClick={onInc} disabled={value >= max}
+          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+            value >= max ? "border-gray-200 text-gray-200 cursor-not-allowed dark:border-gray-700 dark:text-gray-600" : "border-gray-400 text-gray-600 hover:border-gray-900 dark:text-gray-300 dark:hover:border-gray-100"
+          }`}
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -126,6 +157,30 @@ const HotelDetails = () => {
   const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [stayLength, setStayLength]         = useState("Weekend");
   const [flexibleMonths, setFlexibleMonths] = useState([]);
+
+  // New states for guest & scroll
+  const [guests, setGuests] = useState({ adults: 1, children: 0, infants: 0, pets: 0 });
+  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const calendarRef = useRef(null);
+  const guestDropdownRef = useRef(null);
+
+  const totalGuests = guests.adults + guests.children;
+
+  const limits = { adults: 10, children: 5, infants: 5, pets: 5 };
+  const incGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.min(limits[k], g[k] + 1) }));
+  const decGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.max(k === 'adults' ? 1 : 0, g[k] - 1) }));
+
+  const scrollToCalendar = () => {
+    calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (guestDropdownRef.current && !guestDropdownRef.current.contains(e.target)) setShowGuestDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -335,7 +390,7 @@ const HotelDetails = () => {
           )}
 
           {/* Permanent Date Picker Section */}
-          <div className="py-8 border-t dark:border-gray-700">
+          <div ref={calendarRef} className="py-8 border-t dark:border-gray-700">
             <h2 className="text-[22px] font-semibold mb-1">Select checkout date</h2>
             <p className="text-[15px] font-light text-gray-500 mb-6">Add your travel dates for exact pricing</p>
 
@@ -458,24 +513,48 @@ const HotelDetails = () => {
             </div>
 
             {/* Date Picker Input */}
-            <div className="border border-gray-400 dark:border-gray-600 rounded-lg mb-4">
+            <div className="border border-gray-400 dark:border-gray-600 rounded-lg mb-4 bg-white dark:bg-gray-900 relative">
               <div className="flex border-b border-gray-400 dark:border-gray-600">
-                <div className="w-1/2 p-3 border-r border-gray-400 dark:border-gray-600 rounded-tl-lg">
+                <div onClick={scrollToCalendar} className="w-1/2 p-3 border-r border-gray-400 dark:border-gray-600 rounded-tl-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                   <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Check-in</div>
                   <div className="text-sm text-gray-700 dark:text-gray-300">
                     {startDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)}` : "Add date"}
                   </div>
                 </div>
-                <div className="w-1/2 p-3 rounded-tr-lg">
+                <div onClick={scrollToCalendar} className="w-1/2 p-3 rounded-tr-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                   <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Checkout</div>
                   <div className="text-sm text-gray-700 dark:text-gray-300">
                     {endDate ? `${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add date"}
                   </div>
                 </div>
               </div>
-              <div className="p-3 w-full rounded-b-lg">
-                <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Guests</div>
-                <div className="text-sm text-gray-700 dark:text-gray-300">1 guest</div>
+              <div className="relative" ref={guestDropdownRef}>
+                <div 
+                  onClick={() => setShowGuestDropdown(!showGuestDropdown)}
+                  className="p-3 w-full rounded-b-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition flex justify-between items-center"
+                >
+                  <div className="overflow-hidden">
+                    <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Guests</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 truncate pr-2">
+                      {totalGuests} guest{totalGuests !== 1 && 's'} 
+                      {guests.infants > 0 && `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}`}
+                      {guests.pets > 0 && `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}`}
+                    </div>
+                  </div>
+                  {showGuestDropdown ? <ChevronUp className="w-5 h-5 text-gray-500 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-500 shrink-0" />}
+                </div>
+
+                {showGuestDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl p-4 z-50">
+                    <GuestCounter label="Adults" sublabel="Age 13+" value={guests.adults} onInc={() => incGuest('adults')} onDec={() => decGuest('adults')} min={1} max={10} />
+                    <GuestCounter label="Children" sublabel="Ages 2-12" value={guests.children} onInc={() => incGuest('children')} onDec={() => decGuest('children')} max={5} />
+                    <GuestCounter label="Infants" sublabel="Under 2" value={guests.infants} onInc={() => incGuest('infants')} onDec={() => decGuest('infants')} max={5} />
+                    <GuestCounter label="Pets" sublabel="Bringing a service animal?" value={guests.pets} onInc={() => incGuest('pets')} onDec={() => decGuest('pets')} max={5} />
+                    <div className="mt-4 text-xs font-light text-gray-500 text-center">
+                      This property allows a maximum of {data.guests} guests, not including infants.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

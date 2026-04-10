@@ -85,7 +85,7 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay
 }
 
 // ─── GuestCounter ─────────────────────────────────────────────────────────────
-function GuestCounter({ label, sublabel, value, onInc, onDec }) {
+function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0, max = 10 }) {
   return (
     <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
       <div>
@@ -94,15 +94,20 @@ function GuestCounter({ label, sublabel, value, onInc, onDec }) {
       </div>
       <div className="flex items-center gap-3">
         <button
-          onClick={onDec} disabled={value <= 0}
+          onClick={onDec} disabled={value <= min}
           className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-            value <= 0 ? "border-gray-200 text-gray-200 cursor-not-allowed" : "border-gray-400 text-gray-600 hover:border-gray-900"
+            value <= min ? "border-gray-200 text-gray-200 cursor-not-allowed" : "border-gray-400 text-gray-600 hover:border-gray-900"
           }`}
         >
           <Minus className="h-3 w-3" />
         </button>
         <span className="w-5 text-center font-semibold text-sm">{value}</span>
-        <button onClick={onInc} className="w-8 h-8 rounded-full border border-gray-400 text-gray-600 flex items-center justify-center hover:border-gray-900 transition-all">
+        <button 
+          onClick={onInc} disabled={value >= max}
+          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+            value >= max ? "border-gray-200 text-gray-200 cursor-not-allowed" : "border-gray-400 text-gray-600 hover:border-gray-900"
+          }`}
+        >
           <Plus className="h-3 w-3" />
         </button>
       </div>
@@ -119,6 +124,7 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
   const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [stayLength, setStayLength]         = useState("Weekend");
   const [flexibleMonths, setFlexibleMonths] = useState([]);
+  const [selectedServices, setSelectedServices] = useState([]);
 
   const wrapperRef = useRef(null);
   const inputRef   = useRef(null);
@@ -149,9 +155,11 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
   const rightYear     = rightMonthRaw > 11 ? leftYear + 1 : leftYear;
 
   const totalGuests = guests.adults + guests.children;
-  const guestSummary = totalGuests === 0
-    ? (activeTab === "Services" ? "Add service" : "Add guests")
-    : `${totalGuests} guest${totalGuests > 1 ? "s" : ""}${guests.infants > 0 ? `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}` : ""}${guests.pets > 0 ? `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}` : ""}`;
+  const guestSummary = activeTab === "Services"
+    ? (selectedServices.length > 0 ? `${selectedServices.length} selected` : "Add service")
+    : (totalGuests === 0
+        ? "Add guests"
+        : `${totalGuests} guest${totalGuests > 1 ? "s" : ""}${guests.infants > 0 ? `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}` : ""}${guests.pets > 0 ? `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}` : ""}`);
 
   const dateSummary = (() => {
     if (!startDate) return "Add dates";
@@ -175,13 +183,18 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
 
   // ── Day click ─────────────────────────────────────────────────────────────
   const handleDayClick = (date) => {
+    if (startDate && !endDate && date.getTime() === startDate.getTime()) {
+      setStartDate(null);
+      return;
+    }
     if (!startDate || (startDate && endDate)) { setStartDate(date); setEndDate(null); }
     else if (date > startDate) { setEndDate(date); setActiveSection("who"); }
     else { setStartDate(date); setEndDate(null); }
   };
 
   // ── Guest helpers ─────────────────────────────────────────────────────────
-  const incGuest = (k) => setGuests((g) => ({ ...g, [k]: g[k] + 1 }));
+  const limits = { adults: 10, children: 5, infants: 5, pets: 5 };
+  const incGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.min(limits[k], g[k] + 1) }));
   const decGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.max(0, g[k] - 1) }));
 
   // ── Divider visibility ────────────────────────────────────────────────────
@@ -473,24 +486,32 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
                 /* ── Service type picker ── */
                 <div className="bg-white rounded-3xl shadow-[0_6px_20px_rgba(0,0,0,0.18)] p-6 w-[480px]">
                   <div className="flex flex-wrap gap-3">
-                    {SERVICES.map((svc) => (
+                    {SERVICES.map((svc) => {
+                      const isSelected = selectedServices.includes(svc.id);
+                      return (
                       <button
                         key={svc.id}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 hover:border-gray-400 text-sm font-medium text-gray-800 transition-all hover:shadow-sm active:scale-95"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedServices(prev => 
+                            prev.includes(svc.id) ? prev.filter(s => s !== svc.id) : [...prev, svc.id]
+                          );
+                        }}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-medium transition-all hover:shadow-sm active:scale-95 ${isSelected ? 'border-gray-900 bg-gray-50 text-gray-900 shadow-sm' : 'border-gray-200 hover:border-gray-400 text-gray-800'}`}
                       >
                         <span className="text-base leading-none">{svc.icon}</span>
                         <span>{svc.label}</span>
                       </button>
-                    ))}
+                    )})}
                   </div>
                 </div>
               ) : (
                 /* ── Guest counter ── */
                 <div className="bg-white rounded-3xl shadow-[0_6px_20px_rgba(0,0,0,0.18)] p-6 w-80">
-                  <GuestCounter label="Adults"   sublabel="Ages 13 or above"           value={guests.adults}   onInc={() => incGuest("adults")}   onDec={() => decGuest("adults")} />
-                  <GuestCounter label="Children" sublabel="Ages 2–12"                  value={guests.children} onInc={() => incGuest("children")} onDec={() => decGuest("children")} />
-                  <GuestCounter label="Infants"  sublabel="Under 2"                    value={guests.infants}  onInc={() => incGuest("infants")}  onDec={() => decGuest("infants")} />
-                  <GuestCounter label="Pets"     sublabel="Bringing a service animal?" value={guests.pets}     onInc={() => incGuest("pets")}     onDec={() => decGuest("pets")} />
+                  <GuestCounter label="Adults"   sublabel="Ages 13 or above"           value={guests.adults}   onInc={() => incGuest("adults")}   onDec={() => decGuest("adults")} min={1} max={10} />
+                  <GuestCounter label="Children" sublabel="Ages 2–12"                  value={guests.children} onInc={() => incGuest("children")} onDec={() => decGuest("children")} max={5} />
+                  <GuestCounter label="Infants"  sublabel="Under 2"                    value={guests.infants}  onInc={() => incGuest("infants")}  onDec={() => decGuest("infants")} max={5} />
+                  <GuestCounter label="Pets"     sublabel="Bringing a service animal?" value={guests.pets}     onInc={() => incGuest("pets")}     onDec={() => decGuest("pets")} max={5} />
                 </div>
               )}
             </div>
