@@ -6,8 +6,10 @@ import NavItems from "../Header/NavItems/NavItems.jsx";
 import SearchBar from "../Header/SearchBar/Searchbar.jsx";
 import HostDialog from "../Header/HostDialog/HostDialog.jsx";
 import UserMenu from "../Header/UserMenu/UserMenu.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 function DesktopHeader({ activeTab, setActiveTab }) {
+  const { isLoggedIn } = useAuth();
   const [selectedHostType, setSelectedHostType] = useState(null);
   const [openLanguageModal, setOpenLanguageModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
@@ -74,12 +76,18 @@ function DesktopHeader({ activeTab, setActiveTab }) {
                 setSelectedHostType={setSelectedHostType}
               />
             </div>
-            <button
-              onClick={() => setOpenLanguageModal(true)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent dark:border-gray-700"
-            >
-              <Globe size={18} className="text-gray-900 dark:text-gray-100" />
-            </button>
+            {!isLoggedIn ? (
+              <button
+                onClick={() => setOpenLanguageModal(true)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent dark:border-gray-700"
+              >
+                <Globe size={18} className="text-gray-900 dark:text-gray-100" />
+              </button>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
+                V
+              </div>
+            )}
             <UserMenu onOpenLanguageModal={() => setOpenLanguageModal(true)} />
           </div>
         </div>

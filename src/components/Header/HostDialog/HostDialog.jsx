@@ -20,7 +20,7 @@ function HostDialog({ selectedHostType, setSelectedHostType }) {
     if (!isLoggedIn) {
       navigate('/login');
     } else {
-      console.log("Selected:", selectedHostType);
+      navigate('/host-dashboard', { state: { hostType: selectedHostType } });
     }
   };
 

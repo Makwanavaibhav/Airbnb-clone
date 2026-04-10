@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HotelDetails from "./components/Cards/HotelDetails.jsx";
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
+import HostDashboard from "./pages/HostDashboard/HostDashboard.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 
 // Create a layout component to share Header and Footer
@@ -56,6 +57,7 @@ function App() {
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/host-dashboard" element={<HostDashboard />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
