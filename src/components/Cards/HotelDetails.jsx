@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { FiShare, FiHeart, FiStar } from 'react-icons/fi';
 import { BsCheckCircle } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -143,6 +143,7 @@ function DetailSkeleton() {
 // ─── Hotel Detail Page ────────────────────────────────────────────────────────
 const HotelDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -241,44 +242,21 @@ const HotelDetails = () => {
   const serviceFee = Math.round(totalPrice * 0.14);
   const total = totalPrice + serviceFee;
 
-  const handleReserve = async () => {
+  const handleReserve = () => {
     if (!startDate || !endDate) {
       setBookingError("Please select check-in and checkout dates.");
       return;
     }
     setBookingError(null);
-    setIsReserving(true);
-
-    try {
-      const response = await fetch("http://localhost:5001/api/bookings/checkout", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({
-          hotelId: data.id,
-          hotelName: data.title,
-          hotelImage: data.image,
-          startDate: startDate,
-          endDate: endDate,
-          totalDays: days,
-          totalPrice: total,
-        }),
-      });
-
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.error || "Failed to initiate booking");
+    
+    navigate(`/checkout/${data.id}`, {
+      state: {
+        hotel: data,
+        checkIn: startDate,
+        checkOut: endDate,
+        guests: guests
       }
-
-      if (resData.url) {
-        window.location.href = resData.url;
-      }
-    } catch (err) {
-      setBookingError(err.message);
-      setIsReserving(false);
-    }
+    });
   };
 
   return (

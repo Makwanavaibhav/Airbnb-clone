@@ -8,8 +8,16 @@ import HostDialog from "../Header/HostDialog/HostDialog.jsx";
 import UserMenu from "../Header/UserMenu/UserMenu.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
+import { useLocation, useNavigate } from "react-router-dom";
+
 function DesktopHeader({ activeTab, setActiveTab }) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isHomePage = location.pathname === "/";
+  const isHotelPage = location.pathname.startsWith("/hotel/");
+  const showSearchBar = isHomePage || isHotelPage;
+  
   const [selectedHostType, setSelectedHostType] = useState(null);
   const [openLanguageModal, setOpenLanguageModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
@@ -17,9 +25,15 @@ function DesktopHeader({ activeTab, setActiveTab }) {
   const [translateEnabled, setTranslateEnabled] = useState(true);
   const [activeLocaleTab, setActiveLocaleTab] = useState("language");
   const [isScrolled, setIsScrolled] = useState(false);
+  const [forceExpand, setForceExpand] = useState(false);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
   const searchRef = useRef(null);
+
+  useEffect(() => {
+    setForceExpand(false);
+    setIsScrolled(window.scrollY > 50);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,6 +45,7 @@ function DesktopHeader({ activeTab, setActiveTab }) {
             setIsScrolled(false);
           } else {
             setIsScrolled(true);
+            setForceExpand(false); // Close expanded search on scroll
           }
           
           lastScrollY.current = currentScrollY;
@@ -45,6 +60,8 @@ function DesktopHeader({ activeTab, setActiveTab }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const isFullOpen = isHomePage ? (!isScrolled || forceExpand) : forceExpand;
+
 
 
   return (
@@ -58,13 +75,19 @@ function DesktopHeader({ activeTab, setActiveTab }) {
 
           {/* Center area */}
           <div className="flex-1 mx-8 flex justify-center items-center">
-            {isScrolled ? (
-              <SearchBar
-                variant="compact"
-                activeTab={activeTab}
-              />
-            ) : (
-              <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
+            {showSearchBar && (
+              isFullOpen ? (
+                isHomePage ? <NavItems activeTab={activeTab} setActiveTab={setActiveTab} /> : <div className="h-10"></div>
+              ) : (
+                <SearchBar
+                  variant="compact"
+                  activeTab={activeTab}
+                  onExpand={(e) => {
+                    if (e) e.stopPropagation();
+                    setForceExpand(true);
+                  }}
+                />
+              )
             )}
           </div>
 
@@ -84,8 +107,11 @@ function DesktopHeader({ activeTab, setActiveTab }) {
                 <Globe size={18} className="text-gray-900 dark:text-gray-100" />
               </button>
             ) : (
-              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
-                V
+              <div 
+                onClick={() => navigate('/profile')}
+                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'V'}
               </div>
             )}
             <UserMenu onOpenLanguageModal={() => setOpenLanguageModal(true)} />
@@ -97,19 +123,30 @@ function DesktopHeader({ activeTab, setActiveTab }) {
       <div className="h-16"></div>
       
       {/* Search Section - Updated borders */}
-      <div 
-        className={`sticky top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
-          isScrolled
-            ? "-translate-y-full opacity-0 pointer-events-none"
-            : "translate-y-0 opacity-100"
-        }`}
-      >
-        <div className="px-8 py-6">
-          <div className="flex justify-center">
-            <SearchBar activeTab={activeTab} searchRef={searchRef} />
+      {/* Search Section - Updated borders */}
+      {showSearchBar && (
+        <div 
+          className={`${isHomePage ? 'sticky' : 'absolute left-0 right-0 shadow-lg'} top-16 z-40 bg-white dark:bg-gray-900 transition-all duration-300 border-b border-gray-200 dark:border-gray-800 ${
+            !isFullOpen
+              ? "-translate-y-full opacity-0 pointer-events-none invisible"
+              : "translate-y-0 opacity-100 visible"
+          }`}
+        >
+          <div className="px-8 py-6">
+            <div className="flex justify-center">
+              <SearchBar activeTab={activeTab} searchRef={searchRef} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Overlay to close forceExpand when clicking outside */}
+      {forceExpand && (
+        <div 
+          className="fixed inset-0 top-[180px] z-30 bg-black/25" 
+          onClick={() => setForceExpand(false)}
+        />
+      )}
 
       <LocaleModal
         open={openLanguageModal}

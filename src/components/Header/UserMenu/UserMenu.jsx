@@ -46,25 +46,25 @@ const UserMenu = ({ onOpenLanguageModal }) => {
           {isLoggedIn ? (
             <>
               {/* Section 1 (guest actions) */}
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/wishlists")}>
                 <div className="flex items-center gap-3">
                   <Heart className="h-4 w-4" />
                   <span className="font-medium">Wishlists</span>
                 </div>
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/trips")}>
                 <div className="flex items-center gap-3">
                   <AirbnbIcon className="h-4 w-4" />
                   <span className="font-medium">Trips</span>
                 </div>
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/messages")}>
                 <div className="flex items-center gap-3">
                   <MessageSquare className="h-4 w-4" />
                   <span className="font-medium">Messages</span>
                 </div>
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/profile")}>
                 <div className="flex items-center gap-3">
                   <UserIcon className="h-4 w-4" />
                   <span className="font-medium">Profile</span>
@@ -74,7 +74,7 @@ const UserMenu = ({ onOpenLanguageModal }) => {
               <DropdownMenuSeparator className="my-2" />
 
               {/* Section 2 (account) */}
-              <DropdownMenuItem className="py-3 cursor-pointer">
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/account-settings")}>
                 <div className="flex items-center gap-3">
                   <Settings className="h-4 w-4" />
                   <span>Account settings</span>

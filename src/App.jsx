@@ -8,6 +8,12 @@ import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
 import HostDashboard from "./pages/HostDashboard/HostDashboard.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import Profile from "./pages/Profile/Profile.jsx";
+import Checkout from "./pages/Checkout/Checkout.jsx";
+import Messages from "./pages/Messages/Messages.jsx";
+
+const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
 // Create a layout component to share Header and Footer
 function MainLayout({ children, activeTab, setActiveTab }) {
@@ -57,7 +63,61 @@ function App() {
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/host-dashboard" element={<HostDashboard />} />
+          
+          {/* Protected Routes */}
+          <Route path="/host-dashboard" element={
+            <ProtectedRoute requireHost={true}>
+              <HostDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/checkout/:hotelId" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <Checkout />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <Profile />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/trips" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <Placeholder title="Trips" />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/wishlists" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <Placeholder title="Wishlists" />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/messages" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <Messages />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/account-settings" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <Placeholder title="Account Settings" />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
