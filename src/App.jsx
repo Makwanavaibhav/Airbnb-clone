@@ -12,6 +12,9 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Profile from "./pages/Profile/Profile.jsx";
 import Checkout from "./pages/Checkout/Checkout.jsx";
 import Messages from "./pages/Messages/Messages.jsx";
+import Trips from "./pages/Trips/Trips.jsx";
+import Wishlists from "./pages/Wishlists/Wishlists.jsx";
+import AccountSettings from "./pages/AccountSettings/AccountSettings.jsx";
 
 const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
@@ -90,7 +93,7 @@ function App() {
           <Route path="/trips" element={
             <ProtectedRoute>
               <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-                <Placeholder title="Trips" />
+                <Trips />
               </MainLayout>
             </ProtectedRoute>
           } />
@@ -98,7 +101,7 @@ function App() {
           <Route path="/wishlists" element={
             <ProtectedRoute>
               <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-                <Placeholder title="Wishlists" />
+                <Wishlists />
               </MainLayout>
             </ProtectedRoute>
           } />
@@ -114,7 +117,7 @@ function App() {
           <Route path="/account-settings" element={
             <ProtectedRoute>
               <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-                <Placeholder title="Account Settings" />
+                <AccountSettings />
               </MainLayout>
             </ProtectedRoute>
           } />

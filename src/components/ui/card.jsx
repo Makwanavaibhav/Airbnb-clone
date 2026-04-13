@@ -1,22 +1,49 @@
 import React from "react";
 import { BsHeartFill, BsHeart } from "react-icons/bs";
 import { FiStar } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export function HotelCard({ hotel }) {
   const [isFavorite, setIsFavorite] = React.useState(false);
-  const [imgSrc, setImgSrc] = React.useState(hotel.image);
+  const [imgSrc, setImgSrc] = React.useState(hotel.image || (hotel.images && hotel.images[0]));
   const [hasError, setHasError] = React.useState(false);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
-    setImgSrc(hotel.image);
+    setImgSrc(hotel.image || (hotel.images && hotel.images[0]));
     setHasError(false);
-  }, [hotel.image]);
+    
+    // Check if favorited... for simplicity, assuming API call or prop
+    // The user's prompt suggested passing isFavorited from parent, but we can manage local state for now
+    // or fetch if needed. We'll stick to a toggle action.
+  }, [hotel]);
 
-  const handleHeartClick = (e) => {
+  const handleHeartClick = async (e) => {
     e.preventDefault(); 
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      if (isFavorite) {
+        await axios.delete(`http://localhost:5001/api/users/wishlist/${hotel._id || hotel.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await axios.post('http://localhost:5001/api/users/wishlist', 
+          { hotelId: hotel._id || hotel.id },
+          { headers: { Authorization: `Bearer ${token}` }}
+        );
+      }
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+    }
   };
 
   const handleError = () => {
@@ -31,7 +58,7 @@ export function HotelCard({ hotel }) {
   };
 
   return (
-    <Link to={`/hotel/${hotel.id}`} className="flex flex-col gap-3 group cursor-pointer w-[300px] shrink-0">
+    <Link to={`/hotel/${hotel._id || hotel.id}`} className="flex flex-col gap-3 group cursor-pointer w-[300px] shrink-0">
       {/* Image container - Exact square */}
       <div className="relative aspect-square overflow-hidden rounded-xl">
         <img 

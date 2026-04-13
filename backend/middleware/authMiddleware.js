@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const mongoose = require('mongoose');
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -8,8 +9,16 @@ const authenticateToken = (req, res, next) => {
   jwt.verify(token, process.env.JWT_SECRET || "default_secret", (err, user) => {
     if (err) return res.status(403).json({ error: "Invalid token. Please log in again." });
     req.user = user;
+    if (user.userId) {
+      req.user._id = user.userId;
+    }
     next();
   });
 };
 
-module.exports = authenticateToken;
+const protect = authenticateToken;
+
+module.exports = {
+  authenticateToken,
+  protect
+};
