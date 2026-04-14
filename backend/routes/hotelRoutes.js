@@ -3,7 +3,9 @@ const router = express.Router();
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
-const authenticateToken = require("../middleware/authMiddleware");
+const { authenticateToken } = require("../middleware/authMiddleware");
+const Hotel = require("../models/Hotel");
+const Review = require("../models/Review");
 
 // S3 Configuration Fallback 
 let upload;
@@ -31,83 +33,115 @@ if (process.env.AWS_ACCESS_KEY_ID) {
     }),
   });
 } else {
-  // Graceful fallback to memory storage without crashing the server if keys are missing
   console.log("No AWS Keys. S3 Uploads falling back to Unsplash dummy.");
   upload = multer({ storage: multer.memoryStorage() }); 
 }
 
-// POST /api/hotels (Host Dashboard Upload via S3)
-router.post("/", authenticateToken, upload.single("image"), async (req, res) => {
-  const db = req.app.locals.db;
+// POST /api/hotels (Host Dashboard Upload via S3 - Multi Image)
+// We use .any() to handle both "image" (legacy) and "images" array for flexibility
+router.post("/", authenticateToken, upload.any(), async (req, res) => {
   try {
-    const { name, location, price, rating, hostName } = req.body;
+    const { name, title, location, price, priceRaw, pricePerNight, rating, hostName, description, guests, bedrooms, beds, baths, amenities } = req.body;
     
-    if (!name || !location || !price) {
+    const hotelTitle = title || name;
+    const hotelPrice = pricePerNight || priceRaw || price;
+
+    if (!hotelTitle || !location || !hotelPrice) {
       return res.status(400).json({ error: "Missing required fields." });
     }
 
-    let imageUrl = "";
-
-    if (process.env.AWS_ACCESS_KEY_ID && req.file) {
-      imageUrl = req.file.location; // Assigned successfully by S3
-    } else {
-      // Hardware dummy link if they try to post without dot env setups
-       imageUrl = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80";
-    }
+    let imageUrls = [];
     
-    // Auto-increment traditional ID schema for frontend legacy integrations
-    const lastHotelArray = await db.collection("hotels").find().sort({ id: -1 }).limit(1).toArray();
-    const newId = lastHotelArray.length > 0 ? (lastHotelArray[0].id + 1) : 1;
+    // Process uploaded files
+    if (req.files && req.files.length > 0) {
+      if (process.env.AWS_ACCESS_KEY_ID) {
+        imageUrls = req.files.map(file => file.location);
+      } else {
+        // Dummy fallback for testing without S3
+        imageUrls = [
+          "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1542314831-c6a4d14d8373?auto=format&fit=crop&w=800&q=80"
+        ];
+      }
+    } else {
+      imageUrls = ["https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80"];
+    }
 
-    const newHotel = {
-      id: newId,
-      name,
+    // Parse arrays/JSON strings from FormData
+    let parsedAmenities = [];
+    if (typeof amenities === 'string') {
+      try { parsedAmenities = JSON.parse(amenities); } catch(e) { parsedAmenities = amenities.split(','); }
+    } else if (Array.isArray(amenities)) {
+      parsedAmenities = amenities;
+    }
+
+    const newHotel = new Hotel({
+      title: hotelTitle,
       location,
-      price: parseInt(price),
+      pricePerNight: parseInt(hotelPrice),
+      priceRaw: parseInt(hotelPrice),
       rating: parseFloat(rating) || 5.0,
-      hostName: hostName || "Independent Host",
-      image: imageUrl,
+      hostName: hostName || req.user?.firstName || "Independent Host",
+      hostId: req.user?._id,
+      image: imageUrls[0], // for legacy support
+      images: imageUrls,
+      description: description || "Beautiful property waiting for you.",
+      guests: guests || "1-4 guests",
       dates: "Flexible dates",
-      guests: "1-4 guests",
-      createdAt: new Date()
-    };
+      bedrooms: parseInt(bedrooms) || 1,
+      beds: parseInt(beds) || 1,
+      baths: parseInt(baths) || 1,
+      amenities: parsedAmenities,
+    });
 
-    const result = await db.collection("hotels").insertOne(newHotel);
-    res.status(201).json({ message: "Hotel created successfully", hotelId: result.insertedId, url: imageUrl });
-
+    const savedHotel = await newHotel.save();
+    res.status(201).json({ message: "Hotel created successfully", hotelId: savedHotel._id, id: savedHotel._id, url: imageUrls[0], images: imageUrls });
   } catch (err) {
     console.error("POST /api/hotels error:", err);
     res.status(500).json({ error: "Failed to upload property" });
   }
 });
 
-// GET /api/hotels — all hotels
-router.get("/", async (req, res) => {
-  const db = req.app.locals.db;
+// GET /api/hotels/search — Advanced Search endpoint
+router.get("/search", async (req, res) => {
   try {
-    const hotels = await db.collection("hotels").find({}).toArray();
+    const { city, minPrice, maxPrice, guests } = req.query;
+    let filter = {};
+
+    if (city) {
+      filter.location = { $regex: city, $options: "i" };
+    }
+    
+    if (minPrice || maxPrice) {
+      filter.pricePerNight = {};
+      if (minPrice) filter.pricePerNight.$gte = parseInt(minPrice);
+      if (maxPrice) filter.pricePerNight.$lte = parseInt(maxPrice);
+    }
+    
+    // Currently guests is a string in the DB, this requires a more robust schema for precise integer filtering,
+    // but for now we can rely on standard features if implemented, or return all matching other criteria.
+    const hotels = await Hotel.find(filter);
     res.json(hotels);
   } catch (err) {
-    console.error("GET /api/hotels error:", err);
-    res.status(500).json({ error: "Failed to fetch hotels" });
+    console.error("GET /api/hotels/search error:", err);
+    res.status(500).json({ error: "Failed to search hotels" });
   }
 });
 
-// GET /api/hotels/city/:city — hotels filtered by location (case-insensitive)
+// GET /api/hotels/city/:city — hotels filtered by location (legacy)
 router.get("/city/:city", async (req, res) => {
-  const db = req.app.locals.db;
   try {
     const cityMap = {
-      udaipur: { $in: ["Udaipur", "Pichola"] },
-      goa:     { $in: ["North Goa", "South Goa", "Calangute", "Baga", "Anjuna", "Panjim"] },
-      mumbai:  { $in: ["Mumbai", "Bandra", "Bandra West", "Bandra East", "Andheri West"] },
+      udaipur: { $in: ["Udaipur", "Pichola", "udaipur"] },
+      goa:     { $in: ["North Goa", "South Goa", "Calangute", "Baga", "Anjuna", "Panjim", "goa"] },
+      mumbai:  { $in: ["Mumbai", "Bandra", "Bandra West", "Bandra East", "Andheri West", "mumbai"] },
     };
     const key = req.params.city.toLowerCase();
     const filter = cityMap[key]
       ? { location: cityMap[key] }
       : { location: { $regex: req.params.city, $options: "i" } };
 
-    const hotels = await db.collection("hotels").find(filter).toArray();
+    const hotels = await Hotel.find(filter);
     res.json(hotels);
   } catch (err) {
     console.error("GET /api/hotels/city error:", err);
@@ -115,13 +149,94 @@ router.get("/city/:city", async (req, res) => {
   }
 });
 
-// GET /api/hotels/:id  — single hotel by numeric id field
-router.get("/:id", async (req, res) => {
-  const db = req.app.locals.db;
+// HOST DASHBOARD API
+
+// GET /api/hotels/host/me — get host active listings
+router.get("/host/me", authenticateToken, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-    const hotel = await db.collection("hotels").findOne({ id });
+    const properties = await Hotel.find({ hostId: req.user._id });
+    res.json({ success: true, properties });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch properties" });
+  }
+});
+
+// PUT /api/hotels/:id — host update listing
+router.put("/:id", authenticateToken, async (req, res) => {
+  try {
+    const hotel = await Hotel.findOneAndUpdate(
+      { _id: req.params.id, hostId: req.user._id },
+      { $set: req.body },
+      { new: true }
+    );
+    if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
+    res.json({ success: true, hotel });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update property" });
+  }
+});
+
+// DELETE /api/hotels/:id — host delete listing
+router.delete("/:id", authenticateToken, async (req, res) => {
+  try {
+    const hotel = await Hotel.findOneAndDelete({ _id: req.params.id, hostId: req.user._id });
+    if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
+    res.json({ success: true, message: "Listing deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete property" });
+  }
+});
+
+// REVIEWS API
+
+// POST /api/hotels/:id/reviews — add review
+router.post("/:id/reviews", authenticateToken, async (req, res) => {
+  try {
+    const { rating, text } = req.body;
+    if (!rating || !text) return res.status(400).json({ error: "Rating and text required" });
+
+    const review = await Review.create({
+      userId: req.user._id,
+      hotelId: req.params.id,
+      rating,
+      text
+    });
+
+    // Recalculate average rating for the hotel
+    const allReviews = await Review.find({ hotelId: req.params.id });
+    const avgRating = allReviews.reduce((acc, item) => acc + item.rating, 0) / allReviews.length;
+    await Hotel.findByIdAndUpdate(req.params.id, { rating: avgRating.toFixed(1) });
+
+    res.status(201).json({ success: true, review });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to post review" });
+  }
+});
+
+// GET /api/hotels/:id/reviews — get reviews
+router.get("/:id/reviews", async (req, res) => {
+  try {
+    const reviews = await Review.find({ hotelId: req.params.id }).populate("userId", "firstName lastName");
+    res.json({ success: true, reviews });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch reviews" });
+  }
+});
+
+
+// GET /api/hotels/:id  — single hotel by id
+router.get("/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Allow lookup by Mongoose ObjectId or legacy string ID mapping if necessary
+    let hotel;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      hotel = await Hotel.findById(id);
+    } else {
+       // Legacy numeric fallback if frontend hasn't completely flushed old data
+       hotel = await Hotel.findOne({ id: parseInt(id) });
+    }
+    
     if (!hotel) return res.status(404).json({ error: "Hotel not found" });
     res.json(hotel);
   } catch (err) {
@@ -129,5 +244,18 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch hotel" });
   }
 });
+
+// GET /api/hotels — all hotels
+router.get("/", async (req, res) => {
+  try {
+    const hotels = await Hotel.find({});
+    // Mongoose toJSON transform will attach .id automatically
+    res.json(hotels);
+  } catch (err) {
+    console.error("GET /api/hotels error:", err);
+    res.status(500).json({ error: "Failed to fetch hotels" });
+  }
+});
+
 
 module.exports = router;

@@ -147,6 +147,13 @@ const HotelDetails = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [newReviewText, setNewReviewText] = useState("");
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [isReserving, setIsReserving] = useState(false);
@@ -202,8 +209,50 @@ const HotelDetails = () => {
         }
       });
 
+    // Fetch real reviews
+    fetch(`http://localhost:5001/api/hotels/${id}/reviews`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && data.success) {
+          setReviews(data.reviews);
+        }
+      })
+      .catch(console.error);
+
     return () => { cancelled = true; };
   }, [id]);
+
+  const handleSubmitReview = async () => {
+    if (!newReviewText.trim()) return;
+    setSubmittingReview(true);
+    try {
+      const token = localStorage.getItem("token"); // Assuming auth context pattern
+      const response = await fetch(`http://localhost:5001/api/hotels/${id}/reviews`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify({ rating: newReviewRating, text: newReviewText })
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Refresh reviews
+        const revRes = await fetch(`http://localhost:5001/api/hotels/${id}/reviews`);
+        const revData = await revRes.json();
+        setReviews(revData.reviews);
+        setNewReviewText("");
+        setNewReviewRating(5);
+      } else {
+        alert(result.error || "Failed to post review. Ensure you are logged in.");
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error posting review. Please log in first.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const handleDayClick = (date) => {
     setBookingError(null);
@@ -285,19 +334,19 @@ const HotelDetails = () => {
       {/* 5-Image Gallery Grid */}
       <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[460px] rounded-xl overflow-hidden mb-12">
         <div className="col-span-2 row-span-2">
-          <S3Image src={data.image} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.images?.[0] || data.image} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <S3Image src={data.image} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.images?.[1] || data.image} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <S3Image src={data.image} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.images?.[2] || data.image} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1">
-          <S3Image src={data.image} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.images?.[3] || data.image} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1 relative">
-          <S3Image src={data.image} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
+          <S3Image src={data.images?.[4] || data.image} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
           <button className="absolute bottom-4 right-4 bg-white border border-black px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2">
             Show all photos
           </button>
@@ -454,31 +503,66 @@ const HotelDetails = () => {
             </div>
           </div>
 
-          {/* Mock Reviews Section */}
+          {/* Reviews Section */}
           <div className="py-8 border-t">
             <div className="flex items-center gap-2 mb-8">
               <FiStar className="fill-current w-6 h-6" />
-              <h2 className="text-[22px] font-semibold">4.8 · {MOCK_REVIEWS.length} reviews</h2>
+              <h2 className="text-[22px] font-semibold">{data.rating || "New"} · {reviews.length} reviews</h2>
             </div>
-            <div className="grid grid-cols-2 gap-x-12 gap-y-10">
-              {MOCK_REVIEWS.map(review => (
-                <div key={review.id}>
-                  <div className="flex items-center gap-4 mb-4">
-                    <img src={review.avatar} alt={review.name} className="w-12 h-12 rounded-full object-cover" />
-                    <div>
-                      <div className="font-semibold text-[16px]">{review.name}</div>
-                      <div className="text-[14px] text-gray-500">{review.date}</div>
+            
+            {reviews.length > 0 ? (
+              <div className="grid grid-cols-2 gap-x-12 gap-y-10">
+                {reviews.map(review => (
+                  <div key={review._id}>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex justify-center items-center font-bold text-gray-500">
+                        {review.userId?.firstName?.charAt(0) || "U"}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-[16px]">{review.userId?.firstName || "Guest"}</div>
+                        <div className="text-[14px] text-gray-500">{new Date(review.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+                      </div>
                     </div>
+                    <p className="text-[16px] text-gray-800 dark:text-gray-200 font-light leading-relaxed">
+                      {review.text}
+                    </p>
                   </div>
-                  <p className="text-[16px] text-gray-800 dark:text-gray-200 font-light leading-relaxed">
-                    {review.text}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+                <div className="text-gray-500 mb-8 italic">No reviews yet. Be the first to review this property!</div>
+            )}
+            
             <button className="mt-8 px-6 py-3 border border-gray-900 dark:border-gray-100 rounded-lg text-[16px] font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-              Show all {MOCK_REVIEWS.length} reviews
+              Show all reviews
             </button>
+
+            {/* Write a review */}
+            <div className="mt-12 bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700">
+               <h3 className="text-[18px] font-semibold mb-4">Leave a review</h3>
+               <div className="flex items-center gap-2 mb-4">
+                  <span className="text-sm text-gray-600">Your Rating: </span>
+                  {[1,2,3,4,5].map(v => (
+                    <button key={v} onClick={() => setNewReviewRating(v)} className="text-lg">
+                      <FiStar className={newReviewRating >= v ? "fill-[#FF385C] text-[#FF385C]" : "text-gray-400"} />
+                    </button>
+                  ))}
+               </div>
+               <textarea 
+                  className="w-full outline-none border border-gray-300 dark:border-gray-600 p-4 rounded-xl resize-none focus:border-black dark:bg-gray-900"
+                  rows={4}
+                  placeholder="Share your experience..."
+                  value={newReviewText}
+                  onChange={e => setNewReviewText(e.target.value)}
+               />
+               <button 
+                  onClick={handleSubmitReview}
+                  disabled={submittingReview}
+                  className="mt-4 px-6 py-2.5 bg-[#222222] hover:bg-black text-white font-medium rounded-lg transition-colors shadow-sm disabled:bg-gray-400"
+               >
+                 {submittingReview ? "Submitting..." : "Submit Review"}
+               </button>
+            </div>
           </div>
         </div>
 

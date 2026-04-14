@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, MapPin, IndianRupee, ImagePlus, Loader2, Menu } from "lucide-react";
+import { ArrowLeft, Home, MapPin, IndianRupee, ImagePlus, Loader2, Menu, Trash2, Edit2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import LongLogo from "../../assets/logo/long-logo.png";
 import ListingCreationWizard from "./ListingCreationWizard.jsx";
@@ -11,6 +11,49 @@ const HostDashboard = () => {
   const { isLoggedIn, getToken } = useAuth();
   const [showListingForm, setShowListingForm] = useState(false);
   const [activeTab, setActiveTab] = useState("Today");
+  
+  const [properties, setProperties] = useState([]);
+  const [loadingListings, setLoadingListings] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "Listings") {
+      fetchListings();
+    }
+  }, [activeTab]);
+
+  const fetchListings = async () => {
+    setLoadingListings(true);
+    try {
+      const response = await fetch("http://localhost:5001/api/hotels/host/me", {
+        headers: { "Authorization": `Bearer ${getToken()}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setProperties(data.properties);
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setLoadingListings(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if(!window.confirm("Are you sure you want to delete this listing?")) return;
+    try {
+      const response = await fetch(`http://localhost:5001/api/hotels/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${getToken()}` }
+      });
+      if (response.ok) {
+        fetchListings();
+      } else {
+        alert("Failed to delete listing.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (!isLoggedIn) {
     navigate("/login");
@@ -83,29 +126,11 @@ const HostDashboard = () => {
             <div className="flex flex-col items-center max-w-sm text-center">
               <div className="mb-6 relative">
                 <div className="w-32 h-32 opacity-90 pl-3">
-                  {/* Custom Book SVG */}
                   <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                     <g transform="translate(10, 10) rotate(-15)">
                       <rect x="10" y="10" width="80" height="90" rx="4" fill="#fcfcfc" stroke="#dcdcdc" strokeWidth="2.5" />
                       <path d="M50 10 L50 100" stroke="#dcdcdc" strokeWidth="2.5" />
-
-                      {/* Red Ribbon Bookmark */}
                       <path d="M 45 6 L 45 35 L 35 25 L 25 35 L 25 6 Z" fill="#E01561" />
-
-                      {/* Pseudo text lines */}
-                      <line x1="18" y1="22" x2="33" y2="22" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="18" y1="32" x2="33" y2="32" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="18" y1="42" x2="42" y2="42" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="18" y1="52" x2="42" y2="52" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="18" y1="62" x2="42" y2="62" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="18" y1="72" x2="42" y2="72" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-
-                      <line x1="58" y1="22" x2="82" y2="22" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="58" y1="32" x2="82" y2="32" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="58" y1="42" x2="82" y2="42" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="58" y1="52" x2="82" y2="52" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="58" y1="62" x2="82" y2="62" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="58" y1="72" x2="72" y2="72" stroke="#dcdcdc" strokeWidth="2" strokeLinecap="round" />
                     </g>
                   </svg>
                 </div>
@@ -122,29 +147,69 @@ const HostDashboard = () => {
               </button>
             </div>
           </>
-        ) : (
-          <div className="flex flex-col items-center mt-20 text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-4">
-              {activeTab}
-            </h2>
-            {activeTab === "Listings" ? (
-              <div className="max-w-md w-full">
-                <p className="text-gray-500 mb-6">Manage your property listings here. If you haven't created one, get started now.</p>
-                <button
-                  onClick={() => setShowListingForm(true)}
-                  className="px-8 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-medium rounded-lg transition-colors w-full shadow-sm"
-                >
-                  Create a new listing
-                </button>
+        ) : activeTab === "Listings" ? (
+          <div className="w-full flex flex-col items-start mt-10">
+            <div className="flex justify-between items-center w-full mb-8">
+              <h2 className="text-[32px] font-semibold text-gray-900">Your Listings</h2>
+              <button
+                onClick={() => setShowListingForm(true)}
+                className="px-6 py-2.5 flex items-center gap-2 bg-[#222222] hover:bg-black text-white font-medium rounded-[10px] transition-colors shadow-sm"
+              >
+                <Plus className="w-5 h-5"/> Create new
+              </button>
+            </div>
+            
+            {loadingListings ? (
+               <div className="w-full py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-gray-500" /></div>
+            ) : properties.length === 0 ? (
+              <div className="w-full bg-gray-50 py-20 rounded-2xl flex flex-col items-center text-center mt-10 border border-gray-100">
+                  <p className="text-gray-500 mb-6 text-lg">You haven't created any listings yet.</p>
+                  <button
+                    onClick={() => setShowListingForm(true)}
+                    className="px-8 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-medium rounded-lg transition-colors shadow-sm"
+                  >
+                    Create a new listing
+                  </button>
               </div>
             ) : (
-              <p className="text-gray-500">This center is currently under development.</p>
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {properties.map(prop => (
+                   <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
+                     <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
+                       <img src={prop.image || (prop.images && prop.images[0])} alt={prop.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                       <div className="absolute top-4 right-4 flex gap-2">
+                          <button onClick={() => alert("Edit modal functionality coming soon!")} className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
+                            <Edit2 className="w-4 h-4 text-gray-700"/>
+                          </button>
+                          <button onClick={() => handleDelete(prop._id || prop.id)} className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
+                            <Trash2 className="w-4 h-4 text-red-600"/>
+                          </button>
+                       </div>
+                     </div>
+                     <div className="p-4">
+                       <h3 className="font-semibold text-[17px] truncate">{prop.title}</h3>
+                       <p className="text-gray-500 text-[15px] truncate">{prop.location}</p>
+                       <div className="mt-2 text-[15px] font-semibold">₹{(prop.priceRaw || prop.pricePerNight).toLocaleString('en-IN')} <span className="font-normal text-gray-500">night</span></div>
+                     </div>
+                   </div>
+                 ))}
+              </div>
             )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center mt-20 text-center">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-4">{activeTab}</h2>
+            <p className="text-gray-500">This center is currently under development.</p>
           </div>
         )}
       </div>
     </div>
   );
 };
+
+// Quick Plus Icon since it was omitted from HostDashboard imports originally
+const Plus = ({...props}) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+);
 
 export default HostDashboard;

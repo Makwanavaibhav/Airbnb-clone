@@ -36,15 +36,15 @@ export default function ListingCreationWizard({ onClose }) {
   const [formData, setFormData] = useState({
     propertyType: "",
     listingType: "",
-    location: "Ahmedabad, Gujarat, India", // Set default for ease, updated via input
+    location: "Ahmedabad, Gujarat, India",
     guests: 4,
     bedrooms: 2,
     beds: 2,
     bathrooms: 1,
     amenities: [],
     safetyFeatures: [],
-    image: null,
-    imagePreview: null,
+    images: [],
+    imagePreviews: [],
     title: "",
     description: "",
     minNights: 1,
@@ -84,20 +84,27 @@ export default function ListingCreationWizard({ onClose }) {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateForm("image", file);
-        updateForm("imagePreview", reader.result);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...files] }));
+      
+      const newPreviews = [];
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newPreviews.push(reader.result);
+          if (newPreviews.length === files.length) {
+            setFormData(prev => ({ ...prev, imagePreviews: [...prev.imagePreviews, ...newPreviews] }));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
   const handleSubmit = async () => {
-    if (!formData.imagePreview) {
-      alert("Please upload an image first!");
+    if (formData.imagePreviews.length === 0) {
+      alert("Please upload at least one image first!");
       setCurrentStep(6); // Go to photos
       return;
     }
@@ -110,7 +117,9 @@ export default function ListingCreationWizard({ onClose }) {
       data.append("price", formData.price || "5000");
       data.append("rating", "5.0");
       data.append("hostName", "Host"); 
-      if (formData.image) data.append("image", formData.image);
+      formData.images.forEach(img => {
+        data.append("images", img);
+      });
 
       const response = await fetch("http://localhost:5001/api/hotels", {
         method: "POST",
@@ -349,12 +358,32 @@ export default function ListingCreationWizard({ onClose }) {
             <h1 className="text-4xl text-[#222222] font-semibold text-center mb-4">Add some photos of your place</h1>
             <p className="text-[#717171] text-lg text-center mb-10">You'll need 5 photos to get started. You can add more or make changes later.</p>
             <div className="bg-white border border-dashed border-gray-400 rounded-3xl min-h-[350px] p-8 flex flex-col items-center justify-center relative bg-gray-50/50 hover:bg-gray-50 transition-colors">
-               {formData.imagePreview ? (
-                 <div className="w-full relative">
-                   <img src={formData.imagePreview} className="w-full h-[400px] object-cover rounded-xl shadow-sm" />
-                   <button onClick={() => {updateForm("image", null); updateForm("imagePreview", null)}} className="absolute top-4 right-4 bg-white px-4 py-2 rounded-full font-semibold text-sm shadow hover:scale-105 transition-transform">
-                      Delete
-                   </button>
+               {formData.imagePreviews && formData.imagePreviews.length > 0 ? (
+                 <div className="w-full">
+                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                       {formData.imagePreviews.map((src, i) => (
+                         <div key={i} className="relative aspect-square">
+                           <img src={src} className="w-full h-full object-cover rounded-xl shadow-sm" />
+                           <button onClick={(e) => {
+                                e.stopPropagation();
+                                const newImages = [...formData.images];
+                                const newPreviews = [...formData.imagePreviews];
+                                newImages.splice(i, 1);
+                                newPreviews.splice(i, 1);
+                                updateForm("images", newImages);
+                                updateForm("imagePreviews", newPreviews);
+                             }} 
+                             className="absolute top-2 right-2 bg-white p-1.5 rounded-full font-semibold text-sm shadow hover:scale-105 transition-transform">
+                              <Minus className="w-4 h-4 text-black"/>
+                           </button>
+                         </div>
+                       ))}
+                       <label className="flex flex-col items-center cursor-pointer aspect-square bg-white border border-dashed border-gray-400 rounded-xl justify-center hover:bg-gray-50 transition-colors">
+                          <Plus className="w-8 h-8 text-gray-500 mb-2" />
+                          <span className="text-sm text-gray-500 font-medium">Add more</span>
+                          <input type="file" multiple className="hidden" accept="image/*" onChange={handleImageChange} />
+                       </label>
+                   </div>
                  </div>
                ) : (
                  <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
@@ -362,7 +391,7 @@ export default function ListingCreationWizard({ onClose }) {
                     <h3 className="text-[22px] font-semibold mb-2">Drag your photos here</h3>
                     <p className="text-[#717171] mb-8">Choose at least 5 photos</p>
                     <div className="text-[#222222] font-semibold underline text-lg">Upload from your device</div>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                    <input type="file" multiple className="hidden" accept="image/*" onChange={handleImageChange} />
                  </label>
                )}
             </div>
@@ -414,8 +443,8 @@ export default function ListingCreationWizard({ onClose }) {
            <div className="max-w-3xl w-full mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 mt-10 mb-20 text-center">
               <h1 className="text-4xl text-[#222222] font-semibold text-center mb-10">Review your listing</h1>
               <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 flex flex-col md:flex-row gap-8 max-w-4xl text-left">
-                 <div className="w-full md:w-1/2 aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
-                   {formData.imagePreview ? <img src={formData.imagePreview} className="w-full h-full object-cover" /> : <span className="text-gray-400">No Image</span>}
+                  <div className="w-full md:w-1/2 aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+                   {formData.imagePreviews && formData.imagePreviews.length > 0 ? <img src={formData.imagePreviews[0]} className="w-full h-full object-cover" /> : <span className="text-gray-400">No Image</span>}
                  </div>
                  <div className="w-full md:w-1/2 py-4 flex flex-col justify-center">
                    <div className="flex justify-between items-start mb-2">
