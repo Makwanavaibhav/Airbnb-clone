@@ -2,10 +2,13 @@ import React from "react";
 import { BsHeartFill, BsHeart } from "react-icons/bs";
 import { FiStar } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
 
 export function HotelCard({ hotel }) {
-  const [isFavorite, setIsFavorite] = React.useState(false);
+  const { isLoggedIn, wishlistIds, toggleWishlist } = useAuth();
+  const hotelId = String(hotel._id || hotel.id);
+  const isFavorite = wishlistIds.has(hotelId);
+
   const [imgSrc, setImgSrc] = React.useState(hotel.image || (hotel.images && hotel.images[0]));
   const [hasError, setHasError] = React.useState(false);
   const navigate = useNavigate();
@@ -13,37 +16,16 @@ export function HotelCard({ hotel }) {
   React.useEffect(() => {
     setImgSrc(hotel.image || (hotel.images && hotel.images[0]));
     setHasError(false);
-    
-    // Check if favorited... for simplicity, assuming API call or prop
-    // The user's prompt suggested passing isFavorited from parent, but we can manage local state for now
-    // or fetch if needed. We'll stick to a toggle action.
   }, [hotel]);
 
   const handleHeartClick = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     e.stopPropagation();
-    
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!isLoggedIn) {
       navigate('/login');
       return;
     }
-
-    try {
-      if (isFavorite) {
-        await axios.delete(`http://localhost:5001/api/users/wishlist/${hotel._id || hotel.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } else {
-        await axios.post('http://localhost:5001/api/users/wishlist', 
-          { hotelId: hotel._id || hotel.id },
-          { headers: { Authorization: `Bearer ${token}` }}
-        );
-      }
-      setIsFavorite(!isFavorite);
-    } catch (error) {
-      console.error('Error toggling wishlist:', error);
-    }
+    await toggleWishlist(hotelId);
   };
 
   const handleError = () => {

@@ -101,7 +101,7 @@ const UserMenu = ({ onOpenLanguageModal }) => {
               <DropdownMenuSeparator className="my-2" />
 
               {/* Section 3 (host) */}
-              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/login")}>
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/register")}>
                 <div className="flex items-start gap-3 w-full">
                   <div className="flex-1">
                     <span className="font-medium text-gray-900 block">Become a host</span>

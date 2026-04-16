@@ -23,9 +23,8 @@ const Login = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Login failed");
       
-      // Call the global login context
-      login(data.token);
-      // Return to the homepage interactively
+      // Pass token + user profile so name shows in About Me
+      login(data.token, data.user || { email });
       navigate('/');
     } catch (err) {
       setError(err.message);

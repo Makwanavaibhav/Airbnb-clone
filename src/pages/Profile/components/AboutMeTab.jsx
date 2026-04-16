@@ -1,11 +1,22 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 
 const AboutMeTab = () => {
   const { user } = useAuth();
-  
-  const initial = user?.firstName ? user.firstName[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : 'V');
-  const name = user?.firstName ? `${user.firstName}` : 'Vaibhav';
+  const navigate = useNavigate();
+
+  const initial = user?.firstName
+    ? user.firstName[0].toUpperCase()
+    : user?.email
+    ? user.email[0].toUpperCase()
+    : '?';
+
+  const name = user?.firstName
+    ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
+    : user?.email
+    ? user.email.split('@')[0]
+    : 'Guest';
 
   return (
     <div className="flex-1 max-w-[800px]">
@@ -32,7 +43,10 @@ const AboutMeTab = () => {
           <p className="text-[16px] text-gray-600 dark:text-gray-400 font-light mb-6 leading-relaxed">
             Your Airbnb profile is an important part of every reservation. Create yours to help other hosts and guests get to know you.
           </p>
-          <button className="bg-[#FF385C] hover:bg-[#D90B63] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+          <button
+            onClick={() => navigate('/account-settings')}
+            className="bg-[#FF385C] hover:bg-[#D90B63] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
             Get started
           </button>
         </div>

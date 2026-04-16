@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const Register = () => {
     password: ''
   });
   const [error, setError] = useState('');
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,7 +40,9 @@ const Register = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Registration failed");
       
-      navigate("/login");
+      // Auto-login after registration so name is available right away
+      login(data.token, data.user || { firstName: formData.firstName, lastName: formData.lastName, email: formData.email });
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }

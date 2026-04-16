@@ -8,7 +8,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('about');
 
   return (
-    <div className="max-w-[1280px] mx-auto px-6 py-12 flex flex-col md:flex-row">
+    <div className="max-w-[1280px] mx-auto px-6 py-12 pb-40 flex flex-col md:flex-row min-h-screen">
       <ProfileSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       {activeTab === 'about' && <AboutMeTab />}

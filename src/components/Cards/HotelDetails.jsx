@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiShare, FiHeart, FiStar } from 'react-icons/fi';
-import { BsCheckCircle } from 'react-icons/bs';
+import { BsCheckCircle, BsHeartFill } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { ChevronLeft, ChevronRight, Calendar, Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchHotelById } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── GuestCounter ─────────────────────────────────────────────────────────────
 function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0, max = 10 }) {
@@ -144,6 +145,7 @@ function DetailSkeleton() {
 const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isLoggedIn, wishlistIds, toggleWishlist } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -324,9 +326,19 @@ const HotelDetails = () => {
             <FiShare className="w-5 h-5" />
             <span className="underline">Share</span>
           </button>
-          <button className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 px-3 py-1.5 rounded-md font-medium text-sm transition">
-            <FiHeart className="w-5 h-5" />
-            <span className="underline">Save</span>
+          <button
+            onClick={async () => {
+              if (!isLoggedIn) { navigate('/login'); return; }
+              await toggleWishlist(String(id));
+            }}
+            className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 px-3 py-1.5 rounded-md font-medium text-sm transition"
+          >
+            {wishlistIds.has(String(id)) ? (
+              <BsHeartFill className="w-5 h-5" style={{ color: '#FF385C' }} />
+            ) : (
+              <FiHeart className="w-5 h-5" />
+            )}
+            <span className="underline">{wishlistIds.has(String(id)) ? 'Saved' : 'Save'}</span>
           </button>
         </div>
       </div>
