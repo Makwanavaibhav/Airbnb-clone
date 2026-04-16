@@ -1,11 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect as _useEffect } from "react";
 import { 
-  Home, Building, Ship, Trees, Castle, Tent, Caravan, Box, Menu, 
-  MapPin, Check, Plus, Minus, UploadCloud, Search, ShieldCheck, DollarSign, Camera, 
-  ChevronLeft, Loader2, Users, Star, Info, Zap, AlertCircle
+  Home, Building, Ship, Trees, Castle, Tent, Caravan, Box,
+  MapPin, Plus, Minus, Search, ShieldCheck, Camera, 
+  ChevronLeft, Loader2, Users, Star, Info, Zap, AlertCircle, ImageOff
 } from "lucide-react";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
+
+// Fix Leaflet default icon paths broken by Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -40,10 +51,10 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-export default function ListingCreationWizardWrapper({ onClose }) {
+export default function ListingCreationWizardWrapper({ onClose, draftData }) {
   return (
     <ErrorBoundary>
-      <ListingCreationWizard onClose={onClose} />
+      <ListingCreationWizard onClose={onClose} draftData={draftData} />
     </ErrorBoundary>
   );
 }
@@ -77,10 +88,14 @@ function ListingCreationWizard({ onClose, draftData }) {
   const [showAddressModal1, setShowAddressModal1] = useState(false);
   const [showAddressModal2, setShowAddressModal2] = useState(false);
 
-  // Search autocomplete state
-  const [locationSearch, setLocationSearch] = useState("");
+  // Search autocomplete state — Fix #4: seed from draft
+  const [locationSearch, setLocationSearch] = useState(draftData?.formData?.location || "");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+
+  // Map coordinates for the Leaflet pin
+  const [mapCenter, setMapCenter] = useState(draftData?.formData?.lat ? [draftData.formData.lat, draftData.formData.lng] : [20.5937, 78.9629]);
+  const [markerPos, setMarkerPos] = useState(draftData?.formData?.lat ? [draftData.formData.lat, draftData.formData.lng] : null);
 
   const [formData, setFormData] = useState(draftData?.formData || {
     propertyType: "",
@@ -208,9 +223,9 @@ function ListingCreationWizard({ onClose, draftData }) {
   };
 
   const handleSubmit = async () => {
-    if (formData.imagePreviews.length === 0) {
-      alert("Please upload at least one image first!");
-      setCurrentStep(STEPS.indexOf("Photos")); // Go to photos
+    if (formData.images.length === 0) {
+      alert("Please upload at least one image before publishing!");
+      setCurrentStep(STEPS.indexOf("Photos"));
       return;
     }
     setLoading(true);
@@ -223,6 +238,10 @@ function ListingCreationWizard({ onClose, draftData }) {
       data.append("price", formData.weekdayPrice || "5000");
       data.append("priceRaw", formData.weekdayPrice || "5000");
       data.append("pricePerNight", formData.weekdayPrice || "5000");
+      if (markerPos) {
+        data.append("lat", markerPos[0]);
+        data.append("lng", markerPos[1]);
+      }
       data.append("guests", formData.guests || "1");
       data.append("bedrooms", formData.bedrooms || "1");
       data.append("beds", formData.beds || "1");
@@ -230,20 +249,26 @@ function ListingCreationWizard({ onClose, draftData }) {
       data.append("description", formData.description || "A wonderful place to stay.");
       data.append("amenities", JSON.stringify(formData.amenities || []));
       data.append("rating", "5.0");
-      data.append("hostName", "Host"); 
-      formData.images.forEach(img => {
-        data.append("images", img);
-      });
+      data.append("hostName", "Host");
+      formData.images.forEach(img => data.append("images", img));
 
       const response = await fetch("http://localhost:5001/api/hotels", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: data, 
+        headers: { Authorization: `Bearer ${token}` },
+        body: data,
       });
 
       if (!response.ok) throw new Error("Failed to create listing.");
-      alert("Property published beautifully!");
-      navigate("/"); 
+
+      // Fix #6: delete draft from localStorage after successful publish
+      if (draftData?.draftId) {
+        localStorage.removeItem(`listing_draft_${draftData.draftId}`);
+        const idx = JSON.parse(localStorage.getItem('listing_drafts_index') || '[]');
+        localStorage.setItem('listing_drafts_index', JSON.stringify(idx.filter(id => id !== draftData.draftId)));
+      }
+
+      // Fix #12: call onClose() instead of navigate("/") so dashboard refreshes
+      onClose();
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -335,45 +360,70 @@ function ListingCreationWizard({ onClose, draftData }) {
       </div>
     );
 
-    if (showAddressModal2) return (
-      <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col h-[80vh] max-h-[700px] overflow-hidden slide-in-from-bottom-4 duration-300">
-          <div className="relative h-full bg-blue-100 flex items-center justify-center overflow-hidden">
-            {/* Mock Map Background via iframe trick or image */}
-            <img src="https://static.dezeen.com/uploads/2014/11/Dezeen_Mapbox_0.jpg" alt="map" className="w-full h-full object-cover scale-110 blur-[1px] opacity-80 mix-blend-multiply" />
-            
-            <div className="absolute top-4 left-4">
-              <button onClick={() => { setShowAddressModal2(false); setShowAddressModal1(true); }} className="bg-white p-2 text-xl rounded-full shadow-md hover:bg-gray-50"><ChevronLeft className="w-6 h-6 text-black"/></button>
-            </div>
+    if (showAddressModal2) {
+      // DraggableMarker — click map to reposition pin
+      const DraggableMarker = () => {
+        useMapEvents({
+          click(e) {
+            const { lat, lng } = e.latlng;
+            setMarkerPos([lat, lng]);
+            setFormData(prev => ({ ...prev, lat, lng }));
+          }
+        });
+        return markerPos ? <Marker position={markerPos} /> : null;
+      };
 
-            <div className="absolute text-center flex flex-col items-center">
-              <div className="bg-black text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl mb-4 animate-bounce">
-                Drag the map to reposition the pin
-              </div>
-              <div className="bg-[#FF385C] w-[60px] h-[60px] rounded-full flex items-center justify-center shadow-2xl text-white transform -translate-y-4">
-                <Home className="w-8 h-8" />
+      return (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col h-[80vh] max-h-[700px] overflow-hidden">
+            {/* Back button overlay */}
+            <div className="absolute top-[60px] left-8 z-[500]">
+              <button onClick={() => { setShowAddressModal2(false); setShowAddressModal1(true); }}
+                className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-50">
+                <ChevronLeft className="w-6 h-6 text-black" />
+              </button>
+            </div>
+            {/* Instruction overlay */}
+            <div className="absolute top-[60px] left-1/2 -translate-x-1/2 z-[500]">
+              <div className="bg-black/80 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl whitespace-nowrap">
+                Click the map to pin your exact location
               </div>
             </div>
-            <div className="absolute right-4 top-4 flex flex-col bg-white rounded-lg shadow-md overflow-hidden">
-              <button className="p-3 border-b hover:bg-gray-50"><Plus className="w-5 h-5 text-black"/></button>
-              <button className="p-3 hover:bg-gray-50"><Minus className="w-5 h-5 text-black"/></button>
+            {/* Real Leaflet Map */}
+            <div className="flex-1 relative">
+              <MapContainer
+                center={mapCenter}
+                zoom={13}
+                style={{ height: '100%', width: '100%' }}
+                className="z-[100]"
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <DraggableMarker />
+              </MapContainer>
             </div>
-          </div>
-          <div className="p-4 bg-white z-10 flex justify-between items-center shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-            <div className="text-[17px] font-semibold text-gray-900">Is the pin in the right spot?</div>
-            <button 
-              onClick={() => { 
-                setShowAddressModal2(false); 
-                setCurrentStep(prev => prev + 1); // jump to next step
-              }} 
-              className="bg-[#222222] text-white px-8 py-3 rounded-xl font-semibold text-base hover:bg-black transition"
-            >
-              Done
-            </button>
+            <div className="p-4 bg-white flex justify-between items-center border-t shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+              <div>
+                <div className="text-[17px] font-semibold text-gray-900">Pin your exact location</div>
+                {markerPos && (
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {markerPos[0].toFixed(5)}, {markerPos[1].toFixed(5)}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => { setShowAddressModal2(false); setCurrentStep(prev => prev + 1); }}
+                className="bg-[#222222] text-white px-8 py-3 rounded-xl font-semibold text-base hover:bg-black transition"
+              >
+                {markerPos ? 'Confirm' : 'Skip'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
 
     const CounterRow = ({ label, field }) => (
       <div className="flex items-center justify-between py-6 border-b border-gray-200">
@@ -510,6 +560,15 @@ function ListingCreationWizard({ onClose, draftData }) {
                             updateForm("location", res.sub);
                             setLocationSearch(res.sub); // Sync the input box with full address
                             
+                            // Extract precise lat/lng from Nominatim result
+                            const lat = parseFloat(res.raw?.lat);
+                            const lon = parseFloat(res.raw?.lon);
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                              setMapCenter([lat, lon]);
+                              setMarkerPos([lat, lon]);
+                              setFormData(prev => ({ ...prev, lat, lng: lon }));
+                            }
+                            
                             // Pre-fill next address fields
                             const parts = res.sub.split(", ");
                             const stateParse = parts.length > 2 ? parts[parts.length - 2] : "";
@@ -616,7 +675,18 @@ function ListingCreationWizard({ onClose, draftData }) {
         return (
           <div className="max-w-3xl w-full mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 mt-10">
             <h1 className="text-4xl text-[#222222] font-semibold text-center mb-4">Add some photos of your place</h1>
-            <p className="text-[#717171] text-lg text-center mb-10">You'll need 5 photos to get started. You can add more or make changes later.</p>
+            <p className="text-[#717171] text-lg text-center mb-6">You'll need 5 photos to get started. You can add more or make changes later.</p>
+
+            {/* Fix #5: warn on draft resume that File objects are lost */}
+            {draftData && formData.images.length === 0 && formData.imagePreviews.length > 0 && (
+              <div className="mb-6 bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+                <ImageOff className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Photos need to be re-uploaded</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Photo previews are shown below but the original files were lost when you saved the draft. Please re-upload them before publishing.</p>
+                </div>
+              </div>
+            )}
             <div className="bg-white border border-dashed border-gray-400 rounded-3xl min-h-[350px] p-8 flex flex-col items-center justify-center relative bg-gray-50/50 hover:bg-gray-50 transition-colors">
                {formData.imagePreviews && formData.imagePreviews.length > 0 ? (
                  <div className="w-full">

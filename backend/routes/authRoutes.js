@@ -14,15 +14,9 @@ router.post("/register", async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "Email already registered." });
 
-    const newUser = await User.create({
-      firstName,
-      lastName,
-      dateOfBirth,
-      email,
-      password // Hook in User.js will hash this
-    });
-
-    res.status(201).json({ message: "User registered successfully", userId: newUser._id });
+    const newUser = await User.create({ firstName, lastName, dateOfBirth, email, password });
+    const token = jwt.sign({ userId: newUser._id, email: newUser.email }, process.env.JWT_SECRET || "default_secret", { expiresIn: "7d" });
+    res.status(201).json({ message: "User registered successfully", token, user: { firstName: newUser.firstName, lastName: newUser.lastName, email: newUser.email } });
   } catch (err) {
     console.error("Register Error:", err);
     res.status(500).json({ error: "Failed to register user." });

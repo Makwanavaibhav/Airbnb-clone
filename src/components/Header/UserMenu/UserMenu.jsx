@@ -101,12 +101,12 @@ const UserMenu = ({ onOpenLanguageModal }) => {
               <DropdownMenuSeparator className="my-2" />
 
               {/* Section 3 (host) */}
-              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/register")}>
+              <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate(isLoggedIn ? "/host-dashboard" : "/register")}>
                 <div className="flex items-start gap-3 w-full">
                   <div className="flex-1">
                     <span className="font-medium text-gray-900 block">Become a host</span>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      It's easy to start hosting and earn extra income.
+                      {isLoggedIn ? "Go to your host dashboard." : "It's easy to start hosting and earn extra income."}
                     </p>
                   </div>
                   <img src={Host} alt="Host" className="w-10 h-10 object-contain" />

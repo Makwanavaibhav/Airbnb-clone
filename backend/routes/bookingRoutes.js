@@ -3,6 +3,25 @@ const router = express.Router();
 const Booking = require('../models/Booking');
 const { protect } = require('../middleware/authMiddleware');
 
+// Get reservations for the host's own listings (Today tab on HostDashboard)
+router.get('/host-reservations', protect, async (req, res) => {
+  try {
+    const Hotel = require('../models/Hotel');
+    // Find all hotels owned by this host
+    const hostHotels = await Hotel.find({ hostId: req.user._id }).select('_id');
+    const hotelIds = hostHotels.map(h => h._id);
+
+    const reservations = await Booking.find({ hotelId: { $in: hotelIds } })
+      .populate('hotelId', 'title images location')
+      .populate('userId', 'firstName lastName email')
+      .sort({ checkInDate: 1 });
+
+    res.json({ success: true, trips: reservations });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching host reservations', error: error.message });
+  }
+});
+
 // Get user's trips
 router.get('/my-trips', protect, async (req, res) => {
   try {

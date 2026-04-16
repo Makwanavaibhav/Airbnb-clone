@@ -4,6 +4,16 @@ const User = require('../models/User');
 const Hotel = require('../models/Hotel');
 const { protect } = require('../middleware/authMiddleware');
 
+// Get current user profile (Fix #9)
+router.get('/me', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching profile', error: error.message });
+  }
+});
+
 // Get user's wishlist
 router.get('/wishlist', protect, async (req, res) => {
   try {

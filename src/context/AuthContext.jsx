@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 
 const AuthContext = createContext();
@@ -8,8 +8,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
   });
-  // Set of hotel IDs in the user's wishlist — shared globally for heart-sync
   const [wishlistIds, setWishlistIds] = useState(new Set());
+
+  // Mutable ref so toggleWishlist never has stale closure (Fix #3)
+  const wishlistIdsRef = useRef(wishlistIds);
+  useEffect(() => { wishlistIdsRef.current = wishlistIds; }, [wishlistIds]);
 
   const getToken = () => localStorage.getItem("token");
 
@@ -30,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     setWishlistIds(new Set());
   };
 
-  // Fetch wishlist IDs from backend when logged in
+  // Fetch wishlist IDs from backend
   const fetchWishlistIds = useCallback(async () => {
     const token = getToken();
     if (!token) return;
@@ -41,36 +44,66 @@ export const AuthProvider = ({ children }) => {
       const items = res.data.wishlist || [];
       setWishlistIds(new Set(items.map(h => String(h._id || h.id))));
     } catch (e) {
-      // silently ignore if backend unavailable
+      // silently ignore — backend may be starting
     }
   }, []);
 
-  // Toggle wishlist: returns new state (true = now liked)
+  // Hydrate user profile from backend on startup (Fix #9)
+  const fetchUserProfile = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    // Only fetch if we don't already have a user with a name
+    if (user?.firstName) return;
+    try {
+      const res = await axios.get("http://localhost:5001/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const profile = res.data.user || res.data;
+      if (profile?.firstName || profile?.email) {
+        localStorage.setItem("user", JSON.stringify(profile));
+        setUser(profile);
+      }
+    } catch (e) {
+      // silently ignore
+    }
+  }, [user?.firstName]);
+
+  // Toggle wishlist — uses ref to avoid stale closure (Fix #3)
   const toggleWishlist = useCallback(async (hotelId) => {
     const token = getToken();
     if (!token) return false;
     const idStr = String(hotelId);
-    const isLiked = wishlistIds.has(idStr);
+    const isLiked = wishlistIdsRef.current.has(idStr);
+    // Optimistic update
+    setWishlistIds(prev => {
+      const s = new Set(prev);
+      isLiked ? s.delete(idStr) : s.add(idStr);
+      return s;
+    });
     try {
       if (isLiked) {
         await axios.delete(`http://localhost:5001/api/users/wishlist/${idStr}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setWishlistIds(prev => { const s = new Set(prev); s.delete(idStr); return s; });
         return false;
       } else {
         await axios.post("http://localhost:5001/api/users/wishlist",
           { hotelId: idStr },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setWishlistIds(prev => new Set([...prev, idStr]));
         return true;
       }
     } catch (e) {
       console.error("Wishlist toggle error", e);
+      // Revert on failure
+      setWishlistIds(prev => {
+        const s = new Set(prev);
+        isLiked ? s.add(idStr) : s.delete(idStr);
+        return s;
+      });
       return isLiked;
     }
-  }, [wishlistIds]);
+  }, []);  // No dependency on wishlistIds — uses ref instead
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -83,8 +116,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) fetchWishlistIds();
-  }, [isLoggedIn, fetchWishlistIds]);
+    if (isLoggedIn) {
+      fetchWishlistIds();
+      fetchUserProfile();
+    }
+  }, [isLoggedIn]); // eslint-disable-line
 
   return (
     <AuthContext.Provider value={{ isLoggedIn, login, logout, user, getToken, wishlistIds, toggleWishlist, fetchWishlistIds }}>
@@ -93,6 +129,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
