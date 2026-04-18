@@ -33,18 +33,24 @@ const Trips = () => {
     }
   };
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-    
+  const [cancelId, setCancelId] = useState(null);
+
+  const confirmCancel = async () => {
+    if (!cancelId) return;
     try {
-      await axios.post(`http://localhost:5001/api/bookings/${bookingId}/cancel`, {}, {
+      await axios.post(`http://localhost:5001/api/bookings/${cancelId}/cancel`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       fetchTrips(); // Refresh the list
-      alert('Booking cancelled successfully');
+      setCancelId(null);
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to cancel booking');
+      setCancelId(null);
     }
+  };
+
+  const handleCancelBooking = (bookingId) => {
+    setCancelId(bookingId);
   };
 
   const filterTrips = () => {
@@ -98,6 +104,30 @@ const Trips = () => {
               onCancel={handleCancelBooking}
             />
           ))}
+        </div>
+      )}
+
+      {/* Inline Confirmation Modal */}
+      {cancelId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Cancel Booking?</h3>
+            <p className="text-gray-500 mb-6">Are you sure you want to cancel this booking? This action cannot be undone.</p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setCancelId(null)} 
+                className="flex-1 py-3 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+               >
+                 Keep it
+              </button>
+              <button 
+                onClick={confirmCancel} 
+                className="flex-1 py-3 bg-[#E31C5F] text-white font-semibold rounded-lg hover:bg-[#C11751] transition-colors"
+               >
+                 Cancel it
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

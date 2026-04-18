@@ -13,6 +13,7 @@ const HostDashboard = () => {
   const [showListingForm, setShowListingForm] = useState(false);
   const [resumeDraft, setResumeDraft] = useState(null);
   const [activeTab, setActiveTab] = useState("Today");
+  const [editingProperty, setEditingProperty] = useState(null);
 
   const [properties, setProperties] = useState([]);
   const [loadingListings, setLoadingListings] = useState(false);
@@ -36,7 +37,7 @@ const HostDashboard = () => {
 
   useEffect(() => {
     if (activeTab === "Listings") { fetchListings(); loadDrafts(); }
-    if (activeTab === "Today") fetchHostBookings();
+    if (activeTab === "Today" || activeTab === "Calendar") fetchHostBookings();
   }, [activeTab]);
 
   // Fix #7: refetch when filter changes
@@ -52,6 +53,11 @@ const HostDashboard = () => {
         headers: { Authorization: `Bearer ${getToken()}` }
       });
       const all = res.data.trips || [];
+
+      if (activeTab === "Calendar") {
+         setBookings(all); // Show everything for calendar
+         return;
+      }
 
       // Fix #7: filter by today vs upcoming
       const today = new Date();
@@ -311,7 +317,7 @@ const HostDashboard = () => {
                             <img src={prop.image || prop.images?.[0]} alt={prop.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute top-4 right-4 flex gap-2">
-                              <button onClick={() => alert("Edit functionality coming soon!")}
+                              <button onClick={() => setEditingProperty(prop)}
                                 className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
                                 <Edit2 className="w-4 h-4 text-gray-700" />
                               </button>
@@ -339,8 +345,91 @@ const HostDashboard = () => {
           </div>
         )}
 
-        {/* ── OTHER TABS ── */}
-        {activeTab !== "Today" && activeTab !== "Listings" && (
+        {/* ── CALENDAR TAB ── */}
+        {activeTab === "Calendar" && (
+          <div className="w-full max-w-4xl mt-6">
+            <h2 className="text-[32px] font-semibold text-gray-900 mb-8">Reservation Calendar</h2>
+            
+            {loadingBookings ? (
+              <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
+            ) : bookings.length > 0 ? (
+              <div className="space-y-6">
+                {/* Simplified timeline view */}
+                <div className="flex flex-col gap-4">
+                  {/* Sort bookings by date for the calendar view */}
+                  {[...bookings].sort((a,b) => new Date(a.checkInDate) - new Date(b.checkInDate)).map(trip => {
+                    const hotel = trip.hotelId || {};
+                    const guest = trip.userId || {};
+                    const checkIn = new Date(trip.checkInDate);
+                    const checkOut = new Date(trip.checkOutDate);
+                    return (
+                      <div key={trip._id} className="flex flex-col md:flex-row gap-4 p-5 border border-gray-100 rounded-2xl bg-white hover:shadow-sm transition-all group">
+                        <div className="w-20 h-20 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden">
+                          <img src={hotel.images?.[0] || hotel.image} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 py-1">
+                          <div>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Property</p>
+                            <h3 className="font-semibold text-gray-900 line-clamp-1">{hotel.title}</h3>
+                            <p className="text-sm text-gray-500">{hotel.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Dates</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {checkIn.toLocaleDateString("en-IN", { day: 'numeric', month: 'short' })} – {checkOut.toLocaleDateString("en-IN", { day: 'numeric', month: 'short' })}
+                            </p>
+                            <p className="text-xs text-gray-500">{Math.round((checkOut - checkIn) / 86400000)} nights</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Guest</p>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold">
+                                {guest.firstName?.[0]}
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">{guest.firstName} {guest.lastName}</span>
+                            </div>
+                            <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              trip.status === "confirmed" ? "bg-green-50 text-green-700" : "bg-orange-50 text-orange-700"
+                            }`}>
+                              Confirmed
+                            </span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => navigate(`/messages?hostId=${guest._id}`)}
+                          className="self-center md:self-auto px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                          Message
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center mt-20 text-center">
+                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
+                  <Calendar className="w-8 h-8 text-gray-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">No upcoming reservations</h2>
+                <p className="text-gray-500">Your property availability will appear here as guests book.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MESSAGES TAB ── */}
+        {activeTab === "Messages" && (
+           <div className="w-full flex flex-col items-center mt-20 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-rose-500 mb-4" />
+              <p className="text-gray-500">Redirecting to your host inbox...</p>
+              {/* Auto redirect to messages page */}
+              {useEffect(() => { navigate("/messages"); }, [])}
+           </div>
+        )}
+
+        {/* ── OTHER TABS (Fallback) ── */}
+        {activeTab !== "Today" && activeTab !== "Listings" && activeTab !== "Calendar" && activeTab !== "Messages" && (
           <div className="flex flex-col items-center mt-20 text-center">
             <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
               <ChevronRight className="w-8 h-8 text-gray-400" />
@@ -349,8 +438,74 @@ const HostDashboard = () => {
             <p className="text-gray-500">This section is under development.</p>
           </div>
         )}
-      </div>
     </div>
+
+    {/* Inline Edit Modal */}
+    {editingProperty && (
+      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col relative shadow-xl">
+          <button onClick={() => setEditingProperty(null)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
+            ✕
+          </button>
+          <h2 className="text-2xl font-semibold mb-6">Edit Listing</h2>
+          
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto px-2">
+             <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
+                <input 
+                  type="text" 
+                  value={editingProperty.title || ''} 
+                  onChange={e => setEditingProperty({...editingProperty, title: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                />
+             </div>
+             <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Nightly Price (₹)</label>
+                <input 
+                  type="number" 
+                  value={editingProperty.pricePerNight || editingProperty.priceRaw || ''} 
+                  onChange={e => setEditingProperty({...editingProperty, pricePerNight: e.target.value, priceRaw: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                />
+             </div>
+             <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                <textarea 
+                  rows={4}
+                  value={editingProperty.description || ''} 
+                  onChange={e => setEditingProperty({...editingProperty, description: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black resize-none"
+                />
+             </div>
+          </div>
+          <div className="flex gap-4 mt-6">
+            <button 
+              onClick={() => setEditingProperty(null)} 
+              className="flex-1 py-3 text-black font-semibold rounded-lg hover:bg-gray-100 transition"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={async () => {
+                try {
+                   const res = await axios.put(`http://localhost:5001/api/hotels/${editingProperty._id}`, editingProperty, {
+                     headers: { Authorization: `Bearer ${getToken()}` }
+                   });
+                   if (res.data.success) {
+                      setEditingProperty(null);
+                      fetchListings();
+                   }
+                } catch (err) { alert("Failed to update."); }
+              }} 
+              className="flex-1 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-semibold rounded-lg transition"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   );
 };
 

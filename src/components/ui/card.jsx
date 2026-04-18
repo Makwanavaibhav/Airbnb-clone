@@ -40,9 +40,9 @@ export function HotelCard({ hotel }) {
   };
 
   return (
-    <Link to={`/hotel/${hotel._id || hotel.id}`} className="flex flex-col gap-3 group cursor-pointer w-[300px] shrink-0">
-      {/* Image container - Exact square */}
-      <div className="relative aspect-square overflow-hidden rounded-xl">
+    <Link to={`/hotel/${hotel._id || hotel.id}`} className="flex flex-col gap-3 group cursor-pointer w-full">
+      {/* Image container - 16:9 on Mobile, Square on Tablet+ */}
+      <div className="relative aspect-[16/9] md:aspect-square overflow-hidden rounded-xl">
         <img 
           src={imgSrc} 
           onError={handleError}
@@ -53,12 +53,12 @@ export function HotelCard({ hotel }) {
         {/* Favorite Button */}
         <button
           onClick={handleHeartClick}
-          className="absolute top-3 right-3 p-2 z-20 hover:scale-110 active:scale-95 transition-all"
+          className="absolute top-4 right-4 p-2 z-20 hover:scale-110 active:scale-95 transition-all w-[44px] h-[44px] flex items-center justify-center"
         >
           {isFavorite ? (
-            <BsHeartFill className="w-6 h-6 text-airbnb drop-shadow-md" style={{ color: '#FF385C' }} />
+            <BsHeartFill className="w-7 h-7 text-airbnb drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" style={{ color: '#FF385C' }} />
           ) : (
-            <BsHeart className="w-6 h-6 text-white drop-shadow-md" style={{ strokeWidth: 1 }} />
+            <BsHeart className="w-7 h-7 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ strokeWidth: 1.5 }} />
           )}
         </button>
       </div>
@@ -85,16 +85,31 @@ export function HotelCard({ hotel }) {
   );
 }
 
-function Card({ hotels, title }) {
+function Card({ hotels, title, layout = "grid" }) {
   if (!hotels || hotels.length === 0) return null;
 
+  if (layout === "scroll") {
+    return (
+      <div className="mb-10 w-full overflow-hidden">
+        {title && <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">{title}</h2>}
+        <div className="flex gap-5 overflow-x-auto pb-6 scrollbar-hide snap-x">
+          {hotels.map((hotel) => (
+            <div key={`hotel-${hotel.id || hotel._id}`} className="min-w-[280px] md:min-w-[320px] snap-start">
+              <HotelCard hotel={hotel} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mb-10">
+    <div className="mb-10 w-full">
       {title && <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">{title}</h2>}
-      <div className="flex space-x-5 overflow-x-auto scrollbar-hide">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 xs:gap-8">
         {hotels.map((hotel) => (
           <HotelCard
-            key={`hotel-${hotel.id}`}
+            key={`hotel-${hotel.id || hotel._id}`}
             hotel={hotel}
           />
         ))}

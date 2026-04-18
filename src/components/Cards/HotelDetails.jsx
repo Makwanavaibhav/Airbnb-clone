@@ -43,7 +43,7 @@ const MONTH_NAMES = ["January","February","March","April","May","June","July","A
 const getDaysInMonth     = (y, m) => new Date(y, m + 1, 0).getDate();
 const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
 
-function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay, setHoveredDay }) {
+function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay, setHoveredDay, bookedDates = [] }) {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay    = getFirstDayOfMonth(year, month);
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -62,23 +62,34 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay
         {cells.map((day, idx) => {
           if (!day) return <div key={`e-${idx}`} />;
           const date = new Date(year, month, day); date.setHours(0, 0, 0, 0);
+          
           const isPast    = date < today;
+          const isBooked  = bookedDates.some(r => date >= r.start && date < r.end); // Note: end date checkout day might be bookable, so < r.end or <= depending on check-in policy. Here using < r.end so people can checkout and checkin on the same day, but simplified to <= if strict
+          let isDisabled  = isPast || isBooked;
+
+          // Also disable if they have a startDate, and this date is after a booked date (cannot span reservations)
+          if (!isDisabled && startDate && !endDate && date > startDate) {
+             const hasBookingBetween = bookedDates.some(r => r.start > startDate && r.start < date);
+             if (hasBookingBetween) isDisabled = true;
+          }
+
           const isStart   = startDate && date.getTime() === startDate.getTime();
           const isEnd     = endDate   && date.getTime() === endDate.getTime();
-          const isInRange = startDate && (endDate || hoveredDay) && date > startDate && date < (hoveredDay && !endDate ? hoveredDay : endDate);
+          const isInRange = startDate && (endDate || hoveredDay) && date > startDate && date < (hoveredDay && !endDate ? hoveredDay : endDate) && !isDisabled;
+
           return (
             <button
               key={day}
-              disabled={isPast}
-              onClick={() => !isPast && onDayClick(date)}
-              onMouseEnter={() => !isPast && startDate && !endDate && setHoveredDay(date)}
+              disabled={isDisabled}
+              onClick={() => !isDisabled && onDayClick(date)}
+              onMouseEnter={() => !isDisabled && startDate && !endDate && setHoveredDay(date)}
               onMouseLeave={() => setHoveredDay(null)}
               className={[
                 "relative h-9 w-full text-sm font-medium rounded-full transition-all",
-                isPast ? "text-gray-300 dark:text-gray-600 cursor-not-allowed" : "cursor-pointer text-gray-900 dark:text-gray-100",
+                isDisabled ? "text-gray-300 dark:text-gray-600 line-through cursor-not-allowed" : "cursor-pointer text-gray-900 dark:text-gray-100",
                 isStart || isEnd ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 z-10" : "",
                 isInRange ? "bg-rose-50 dark:bg-rose-900/30 rounded-none text-gray-900 dark:text-gray-100" : "",
-                !isPast && !isStart && !isEnd ? "hover:bg-gray-100 dark:hover:bg-gray-800" : "",
+                !isDisabled && !isStart && !isEnd ? "hover:bg-gray-100 dark:hover:bg-gray-800" : "",
               ].join(" ")}
             >
               {day}
@@ -155,6 +166,7 @@ const HotelDetails = () => {
   const [newReviewText, setNewReviewText] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [bookedDates, setBookedDates] = useState([]);
   
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -217,6 +229,19 @@ const HotelDetails = () => {
       .then(data => {
         if (!cancelled && data.success) {
           setReviews(data.reviews);
+        }
+      })
+      .catch(console.error);
+
+    // Fetch booked dates
+    fetch(`http://localhost:5001/api/bookings/hotel/${id}/dates`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && data.success) {
+          setBookedDates(data.bookedDates.map(bd => ({
+            start: new Date(bd.checkInDate),
+            end: new Date(bd.checkOutDate)
+          })));
         }
       })
       .catch(console.error);
@@ -343,46 +368,68 @@ const HotelDetails = () => {
         </div>
       </div>
 
-      {/* 5-Image Gallery Grid */}
-      <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[460px] rounded-xl overflow-hidden mb-12">
-        <div className="col-span-2 row-span-2">
+      {/* Photo Gallery */}
+      <div className="md:grid grid-cols-4 grid-rows-2 gap-2 md:h-[460px] rounded-xl overflow-hidden mb-12 hidden">
+        <div className="col-span-2 row-span-2 relative">
           <S3Image src={data.images?.[0] || data.image} alt="Main" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
-        <div className="col-span-1 row-span-1">
+        <div className="col-span-1 row-span-1 relative">
           <S3Image src={data.images?.[1] || data.image} alt="Gallery 1" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
-        <div className="col-span-1 row-span-1">
+        <div className="col-span-1 row-span-1 relative">
           <S3Image src={data.images?.[2] || data.image} alt="Gallery 2" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
-        <div className="col-span-1 row-span-1">
+        <div className="col-span-1 row-span-1 relative">
           <S3Image src={data.images?.[3] || data.image} alt="Gallery 3" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
         </div>
         <div className="col-span-1 row-span-1 relative">
           <S3Image src={data.images?.[4] || data.image} alt="Gallery 4" className="w-full h-full object-cover hover:brightness-90 transition cursor-pointer" />
-          <button className="absolute bottom-4 right-4 bg-white border border-black px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2">
+          <button className="absolute bottom-4 right-4 bg-white border border-black px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 text-gray-900">
             Show all photos
           </button>
         </div>
       </div>
 
+      {/* Mobile Photo Gallery (Carousel) */}
+      <div className="md:hidden flex overflow-x-auto snap-x snap-mandatory h-[260px] rounded-xl overflow-hidden mb-6 relative" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {[data.images?.[0] || data.image, data.images?.[1], data.images?.[2], data.images?.[3], data.images?.[4]].filter(Boolean).map((src, i) => (
+          <div key={i} className="flex-none w-full h-full snap-center relative">
+            <S3Image src={src} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
+          </div>
+        ))}
+        {/* Floating Show All Button */}
+        <button className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white border border-white/20 px-3 py-1.5 rounded-lg text-[13px] font-semibold">
+           1 / {[data.images?.[0] || data.image, data.images?.[1], data.images?.[2], data.images?.[3], data.images?.[4]].filter(Boolean).length}
+        </button>
+      </div>
+
       {/* Main Content Layout */}
-      <div className="flex gap-20">
+      <div className="flex flex-col md:flex-row gap-8 md:gap-20">
 
         {/* Left Column - Details */}
-        <div className="flex-1 max-w-[653px]">
+        <div className="flex-1 w-full md:max-w-[653px]">
 
           {/* Host Info */}
           <div className="flex justify-between items-center pb-6 border-b">
             <div>
-              <h2 className="text-[22px] font-semibold mb-1">Entire home hosted by {data.host?.name}</h2>
-              <div className="text-[15px] text-gray-700 dark:text-gray-300 flex gap-1">
+              <h2 className="text-[22px] font-semibold mb-1">Entire home hosted by {data.host?.name || data.hostName || "Independent Host"}</h2>
+              <div className="text-[15px] text-gray-700 dark:text-gray-300 flex flex-wrap gap-1 mb-2">
                 <span>{data.guests} guests</span> ·
                 <span>{data.bedrooms} bedrooms</span> ·
                 <span>{data.beds} beds</span> ·
                 <span>{data.baths} baths</span>
               </div>
+              <button 
+                onClick={() => {
+                  if (!isLoggedIn) { navigate('/login'); return; }
+                  navigate(`/messages?hostId=${data.hostId}`);
+                }}
+                className="px-4 py-2 border border-black dark:border-white rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 transition"
+              >
+                Contact Host
+              </button>
             </div>
-            <img src={data.host?.image} alt={data.host?.name} className="w-14 h-14 rounded-full object-cover" />
+            <img src={data.host?.image || "https://i.pravatar.cc/150?u=host"} alt={data.host?.name || "Host"} className="w-14 h-14 rounded-full object-cover" />
           </div>
 
           {/* Description */}
@@ -461,8 +508,8 @@ const HotelDetails = () => {
                     </button>
                   </div>
                   <div className="flex gap-8">
-                    <CalendarMonth year={leftYear}  month={leftMonth}  startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} />
-                    <CalendarMonth year={rightYear} month={rightMonth} startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} />
+                    <CalendarMonth year={leftYear}  month={leftMonth}  startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} bookedDates={bookedDates} />
+                    <CalendarMonth year={rightYear} month={rightMonth} startDate={startDate} endDate={endDate} onDayClick={handleDayClick} hoveredDay={hoveredDay} setHoveredDay={setHoveredDay} bookedDates={bookedDates} />
                   </div>
                   <div className="flex gap-2 mt-5 flex-wrap">
                     {["Exact dates","± 1 day","± 2 days","± 3 days","± 7 days","± 14 days"].map((label) => (
@@ -523,7 +570,7 @@ const HotelDetails = () => {
             </div>
             
             {reviews.length > 0 ? (
-              <div className="grid grid-cols-2 gap-x-12 gap-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                 {reviews.map(review => (
                   <div key={review._id}>
                     <div className="flex items-center gap-4 mb-4">
@@ -578,8 +625,8 @@ const HotelDetails = () => {
           </div>
         </div>
 
-        {/* Right Column - Sticky Reservation Card */}
-        <div className="w-[330px]">
+        {/* Right Column - Sticky Reservation Card (Desktop) */}
+        <div className="hidden md:block w-[330px]">
           <div className="sticky top-28 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-[0_6px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.4)] p-6 z-10">
             <div className="flex items-baseline gap-1 mb-6">
               <span className="text-[22px] font-semibold">₹{data.priceRaw?.toLocaleString('en-IN')}</span>
@@ -672,6 +719,26 @@ const HotelDetails = () => {
           </div>
         </div>
 
+      </div>
+
+      {/* Mobile Sticky Booking Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center z-40 transition-transform shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-semibold">₹{data.priceRaw?.toLocaleString('en-IN')}</span>
+            <span className="text-[13px] font-light text-gray-600 dark:text-gray-400">night</span>
+          </div>
+          <div className="text-[13px] text-gray-500 underline font-medium">
+            {startDate && endDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)} - ${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add dates"}
+          </div>
+        </div>
+        <button 
+          onClick={handleReserve}
+          disabled={isReserving}
+          className={`px-8 py-3 rounded-lg text-white font-semibold flex items-center justify-center min-h-[44px] ${isReserving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF385C] active:scale-95'}`}
+        >
+          {isReserving ? 'Reserving...' : 'Reserve'}
+        </button>
       </div>
     </div>
   );

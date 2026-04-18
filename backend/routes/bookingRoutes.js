@@ -3,6 +3,21 @@ const router = express.Router();
 const Booking = require('../models/Booking');
 const { protect } = require('../middleware/authMiddleware');
 
+// Get booked dates for a hotel
+router.get('/hotel/:hotelId/dates', async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      hotelId: req.params.hotelId,
+      status: { $in: ['pending', 'confirmed'] },
+      checkOutDate: { $gte: new Date() } // Only return future bookings
+    }).select('checkInDate checkOutDate');
+
+    res.json({ success: true, bookedDates: bookings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching booked dates', error: error.message });
+  }
+});
+
 // Get reservations for the host's own listings (Today tab on HostDashboard)
 router.get('/host-reservations', protect, async (req, res) => {
   try {
@@ -32,11 +47,17 @@ router.get('/my-trips', protect, async (req, res) => {
     if (status && status !== 'undefined' && status !== 'null') {
       if (status === 'cancelled') {
         query.status = 'cancelled';
+      } else if (status === 'upcoming') {
+        query.status = { $ne: 'cancelled' };
+        query.checkInDate = { $gte: new Date() };
+      } else if (status === 'past') {
+        query.checkOutDate = { $lt: new Date() };
+        query.status = { $ne: 'cancelled' };
       }
     }
 
     const trips = await Booking.find(query)
-      .populate('hotelId', 'title images location price rating')
+      .populate('hotelId', 'title images location price rating hostId')
       .sort({ checkInDate: -1 });
 
     res.json({ 

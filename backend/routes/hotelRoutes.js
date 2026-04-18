@@ -258,4 +258,23 @@ router.get("/", async (req, res) => {
 });
 
 
+// GET /api/hotels/cities - Dynamic city discovery for Home page (Fix #13)
+router.get("/cities", async (req, res) => {
+  try {
+    // Get all unique locations
+    const locations = await Hotel.distinct("location");
+    
+    // Extract cities (assuming "City, State" or "City" format)
+    const citiesSet = new Set();
+    locations.filter(Boolean).forEach(loc => {
+      const city = loc.split(',')[0].trim();
+      if (city) citiesSet.add(city);
+    });
+
+    res.json({ success: true, cities: Array.from(citiesSet) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

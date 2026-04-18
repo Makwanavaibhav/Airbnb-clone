@@ -17,6 +17,19 @@ const Messages = () => {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const currentUserId = currentUser.id || currentUser._id; 
 
+  // Capture hostId from URL query
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hostId = params.get('hostId');
+    if (hostId) {
+       // Typically we would create a new conversation in backend here
+       // We'll mock it by creating a pending thread
+       setFilter('all');
+       const newThreadId = `temp_${hostId}`;
+       setCurrentConversation(newThreadId);
+    }
+  }, []);
+
   useEffect(() => {
     socket = io('http://localhost:5001');
 
@@ -38,10 +51,22 @@ const Messages = () => {
     e.preventDefault();
     if (!inputText.trim() || !currentConversation) return;
 
+    // Determine receiverId based on conversation
+    let receiverId = 'recipient_id_placeholder';
+    if (currentConversation && currentConversation.startsWith('temp_')) {
+      receiverId = currentConversation.split('temp_')[1];
+    } else {
+       // Extract from existing msg thread logic
+       const threadMsg = messages.find(m => m.conversationId === currentConversation);
+       if (threadMsg) {
+          receiverId = threadMsg.senderId === currentUserId ? threadMsg.receiverId : threadMsg.senderId;
+       }
+    }
+
     socket.emit('send_message', {
       conversationId: currentConversation,
       senderId: currentUserId,
-      receiverId: 'recipient_id_placeholder', // Requires proper recipient logic in full app
+      receiverId: receiverId,
       message: inputText
     });
 

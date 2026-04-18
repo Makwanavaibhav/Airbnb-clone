@@ -90,7 +90,7 @@ const Checkout = () => {
         <h1 className="text-[32px] font-semibold tracking-tight">Confirm and pay</h1>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
+      <div className="flex flex-col-reverse lg:flex-row gap-12 lg:gap-24">
         
         {/* Left column (60% width) */}
         <div className="w-full lg:w-[60%] flex-shrink-0">

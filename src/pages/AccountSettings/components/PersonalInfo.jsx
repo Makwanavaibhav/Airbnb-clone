@@ -13,28 +13,55 @@ const PersonalInfo = () => {
   const [editing, setEditing] = useState(null);
 
   useEffect(() => {
-    // We would fetch user profile here if we had an endpoint
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.email) {
-      setFormData(prev => ({
-        ...prev,
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || ''
-      }));
-    }
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('http://localhost:5001/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success && res.data.user) {
+          const u = res.data.user;
+          setFormData(prev => ({
+            ...prev,
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
+            email: u.email || '',
+            phoneNumber: u.phoneNumber || '',
+            dateOfBirth: u.dateOfBirth?.split('T')[0] || '',
+            address: u.address || ''
+          }));
+        }
+      } catch (error) {
+        // Fallback to local storage
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.email) {
+          setFormData(prev => ({
+            ...prev,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || ''
+          }));
+        }
+      }
+    };
+    fetchProfile();
   }, []);
 
   const handleSave = async (field) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch('http://localhost:5001/api/users/profile', 
+      const res = await axios.patch('http://localhost:5001/api/users/profile', 
         { ...formData },
         { headers: { Authorization: `Bearer ${token}` }}
       );
+      if (res.data.success) {
+        const updatedUser = res.data.user;
+        localStorage.setItem('user', JSON.stringify(updatedUser)); // Update local state so it persists
+      }
       setEditing(null);
       alert('Updated successfully');
     } catch (error) {
+      console.error(error);
       alert('Update failed');
     }
   };

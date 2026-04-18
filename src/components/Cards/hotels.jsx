@@ -66,7 +66,77 @@ function CitySection({ cityKey, title }) {
 
   if (hotels.length === 0) return null;
 
-  return <Card hotels={hotels} title={title} />;
+  return <Card hotels={hotels} title={title} layout="scroll" />;
+}
+
+// ─── Search Section for Dynamic Results ──────────────────────────────────────────
+function SearchSection({ searchContext, searchDest }) {
+  const [hotels, setHotels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    
+    // Construct query path
+    const params = new URLSearchParams();
+    if (searchDest && searchDest !== 'anywhere' && searchDest !== 'nearby') {
+       params.append('city', searchDest);
+    }
+    if (searchContext?.checkIn) params.append('checkIn', searchContext.checkIn.toISOString());
+    if (searchContext?.checkOut) params.append('checkOut', searchContext.checkOut.toISOString());
+    if (searchContext?.guests?.adults) params.append('guests', searchContext.guests.adults + searchContext.guests.children);
+
+    fetch(`http://localhost:5001/api/hotels/search?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => {
+         if (!cancelled) {
+             setHotels(Array.isArray(data) ? data : []);
+             setLoading(false);
+         }
+      })
+      .catch(err => {
+         if (!cancelled) {
+            setError(err.message);
+            setLoading(false);
+         }
+      });
+
+    return () => { cancelled = true; };
+  }, [searchDest, searchContext]);
+
+  if (loading) return <SkeletonRow />;
+  
+  if (error) {
+    return (
+      <div className="mb-12">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Search Results</p>
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          Search failed. <span className="font-mono text-xs opacity-70">{error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (hotels.length === 0) {
+    return (
+      <div className="text-center py-20 px-4">
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">No exact matches found</h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Try adjusting your search filters or destination.
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 px-6 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:opacity-90 transition-opacity font-medium"
+        >
+          Clear Search
+        </button>
+      </div>
+    );
+  }
+
+  return <Card hotels={hotels} title={`Search results for "${searchDest}"`} layout="grid" />;
 }
 
 // ─── Main listing page ────────────────────────────────────────────────────────
@@ -75,23 +145,39 @@ import { useSearch } from "../../context/SearchContext.jsx";
 function Cards({ activeTab }) {
   const { appliedSearch } = useSearch();
   const searchDest = (appliedSearch?.destination || "").toLowerCase();
-
-  const CITY_ROUTES = [
-    { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "rajasthan"] },
-    { key: "goa", title: "Top Picks in Goa", match: ["goa", "north goa"] },
-    { key: "mumbai", title: "Places to stay in Mumbai", match: ["mumbai", "maharashtra"] },
-  ];
-
-  // If searchDest is empty or contains "nearby", show all.
-  // Otherwise, check if any match keyword is in searchDest, or vice versa
-  const showAll = !searchDest || searchDest.includes("nearby") || searchDest.includes("anywhere");
   
-  const filteredRoutes = showAll
-    ? CITY_ROUTES
-    : CITY_ROUTES.filter((r) => 
-        r.match.some((kw) => searchDest.includes(kw) || kw.includes(searchDest)) || 
-        r.title.toLowerCase().includes(searchDest)
-      );
+  const [discoveryCities, setDiscoveryCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+
+  useEffect(() => {
+    setLoadingCities(true);
+    fetch("http://localhost:5001/api/hotels/cities")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Map backend cities to format expected by CitySection
+          const formatted = data.cities.map(city => ({
+            key: city.toLowerCase(),
+            title: `Popular homes in ${city}`,
+            match: [city.toLowerCase()]
+          }));
+          setDiscoveryCities(formatted);
+        }
+      })
+      .catch(err => console.error("Error fetching discovery cities:", err))
+      .finally(() => setLoadingCities(false));
+  }, []);
+
+  // If searchDest is empty or contains "nearby", show all predefined sections.
+  // Otherwise, use deep search.
+  const isDefaultView = !searchDest || searchDest === "nearby" || searchDest === "anywhere" || searchDest === "destination";
+  
+  const isHardcodedMatch = discoveryCities.some(r => r.match.some(kw => searchDest.includes(kw)));
+  const useSearchEndpoint = !isDefaultView && !isHardcodedMatch;
+
+  const filteredRoutes = discoveryCities.filter((r) => 
+      !isDefaultView ? r.match.some((kw) => searchDest.includes(kw) || kw.includes(searchDest)) : true
+  );
 
   // Styling block
   const sharedStyles = (
@@ -141,23 +227,14 @@ function Cards({ activeTab }) {
   // 3. Default Homes Tab
   return (
     <div className="w-full px-6 py-8">
-      {filteredRoutes.length > 0 ? (
+      {useSearchEndpoint ? (
+         <SearchSection searchContext={appliedSearch} searchDest={searchDest} />
+      ) : filteredRoutes.length > 0 ? (
         filteredRoutes.map((route) => (
           <CitySection key={route.key} cityKey={route.key} title={route.title} />
         ))
       ) : (
-        <div className="text-center py-20 px-4">
-          <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">No exact matches in our seed DB</h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Try searching for "Udaipur", "Mumbai", or "Goa".
-          </p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-6 px-6 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:opacity-90 transition-opacity font-medium"
-          >
-            Clear Search
-          </button>
-        </div>
+         <SearchSection searchContext={appliedSearch} searchDest={searchDest} />
       )}
       {sharedStyles}
     </div>

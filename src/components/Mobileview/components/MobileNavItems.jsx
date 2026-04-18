@@ -11,12 +11,12 @@ function MobileNavItems({ activeTab, onTabChange, navItemsVisible }) {
   ];
 
   return (
-    <div className="flex items-center justify-around w-full px-4 pt-2 border-b border-gray-100 dark:border-gray-800">
+    <div className="flex items-center w-full px-4 pt-2 border-b border-gray-100 dark:border-gray-800 overflow-x-auto snap-x" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
       {navItems.map((item) => (
         <button
           key={item.label}
           onClick={() => onTabChange(item.label)}
-          className="group relative flex flex-col items-center pb-2 transition-all flex-1"
+          className="group relative flex flex-col items-center pb-2 transition-all flex-[0_0_auto] min-w-[33%] snap-start"
         >
           {/* Logo Container - Only visible when navItemsVisible is true */}
           <div className={`relative mb-1 transition-all duration-300 overflow-visible ${

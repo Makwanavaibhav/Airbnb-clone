@@ -18,7 +18,7 @@ router.get('/me', protect, async (req, res) => {
 router.get('/wishlist', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .populate('wishlist', 'title images location pricePerNight rating');
+      .populate('wishlist', 'title image images location pricePerNight rating');
 
     res.json({ 
       success: true, 

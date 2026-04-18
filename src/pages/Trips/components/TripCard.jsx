@@ -49,6 +49,14 @@ const TripCard = ({ trip, onCancel }) => {
             >
               View Details
             </button>
+            {hotel.hostId && (
+              <button 
+                onClick={() => navigate(`/messages?hostId=${hotel.hostId}`)}
+                className="px-4 py-2 border border-[#FF385C] text-[#FF385C] rounded-lg hover:bg-rose-50 text-sm font-medium transition-colors"
+              >
+                Message Host
+              </button>
+            )}
             {trip.status === 'confirmed' && new Date(trip.checkInDate) > new Date() && (
               <button 
                 onClick={() => onCancel(trip._id)}

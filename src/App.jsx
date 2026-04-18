@@ -35,17 +35,7 @@ function MainLayout({ children, activeTab, setActiveTab }) {
 function App() {
   const [activtab, setActivtab] = useState("Homes");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("booking_success")) {
-      alert("Booking confirmed successfully! Have a great trip.");
-      window.history.replaceState({}, document.title, "/");
-    }
-    if (params.get("booking_error")) {
-      alert("There was an issue processing your booking.");
-      window.history.replaceState({}, document.title, "/");
-    }
-  }, []);
+  // Booking success handled natively via BookingSuccess component
 
   return (
     <AuthProvider>
@@ -129,6 +119,16 @@ function App() {
                 <BookingSuccess />
               </MainLayout>
             </ProtectedRoute>
+          } />
+
+          {/* 404 Route */}
+          <Route path="*" element={
+            <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+              <div className="max-w-[1120px] mx-auto px-6 py-24 text-center">
+                <h1 className="text-4xl font-bold mb-4">404</h1>
+                <p className="text-xl text-gray-500">Page not found</p>
+              </div>
+            </MainLayout>
           } />
         </Routes>
       </BrowserRouter>
