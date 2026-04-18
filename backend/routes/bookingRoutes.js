@@ -104,25 +104,22 @@ router.post('/checkout', protect, async (req, res) => {
     const Stripe = require('stripe');
     const stripeConfig = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY_SECRET;
     
-    if(!stripeConfig) {
+    if (!stripeConfig) {
       return res.status(500).json({ success: false, message: 'Stripe configuration missing' });
     }
     
+    if (!totalAmount || isNaN(Number(totalAmount)) || Number(totalAmount) <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid booking amount' });
+    }
+
     const stripe = new Stripe(stripeConfig);
 
-    // Assuming we use PaymentIntents for Indian regulations or standard setup
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount * 100), // Amount in smallest unit
-      currency: 'inr',
-      metadata: {
-        hotelId,
-        userId: req.user._id.toString(),
-        checkInDate,
-        checkOutDate,
-        guests
-      }
-    });
+    // Fetch hotel name for the Checkout Session line item
+    const Hotel = require('../models/Hotel');
+    const hotel = await Hotel.findById(hotelId).select('title');
+    const hotelTitle = hotel?.title || 'Airbnb Stay';
 
+    // Save booking as pending BEFORE creating session (so we have a bookingId)
     const booking = await Booking.create({
       userId: req.user._id,
       hotelId,
@@ -130,14 +127,45 @@ router.post('/checkout', protect, async (req, res) => {
       checkOutDate,
       guests,
       totalAmount,
-      paymentId: paymentIntent.id,
       status: 'pending'
     });
 
+    const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+
+    // Use Stripe Checkout Session — returns a hosted payment page URL
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: 'inr',
+            product_data: {
+              name: hotelTitle,
+              description: `Check-in: ${checkInDate} → Check-out: ${checkOutDate}`,
+            },
+            unit_amount: Math.round(Number(totalAmount) * 100), // paise
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        bookingId: booking._id.toString(),
+        userId: req.user._id.toString(),
+        hotelId,
+      },
+      success_url: `${clientOrigin}/booking-success?bookingId=${booking._id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${clientOrigin}/hotel/${hotelId}`,
+    });
+
+    // Store the session id on the booking for later verification
+    booking.paymentId = session.id;
+    await booking.save();
+
     res.json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
-      bookingId: booking._id
+      url: session.url,           // ← frontend redirects here
+      bookingId: booking._id,
     });
   } catch (error) {
     res.status(500).json({ 
@@ -148,24 +176,26 @@ router.post('/checkout', protect, async (req, res) => {
   }
 });
 
-// Verify payment and confirm booking
+// Verify payment and confirm booking (called from BookingSuccess page)
 router.post('/verify-payment', protect, async (req, res) => {
   try {
-    const { 
-      paymentIntentId,
-      bookingId 
-    } = req.body;
+    const { paymentIntentId: sessionId, bookingId } = req.body;
+
+    if (!sessionId || !bookingId) {
+      return res.status(400).json({ success: false, message: 'sessionId and bookingId are required' });
+    }
 
     const Stripe = require('stripe');
     const stripeConfig = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY_SECRET;
     const stripe = new Stripe(stripeConfig);
-    
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    if (paymentIntent.status !== 'succeeded') {
+    // Retrieve the Checkout Session (not a PaymentIntent)
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Payment not successful yet' 
+        message: 'Payment not completed yet' 
       });
     }
 
@@ -173,11 +203,15 @@ router.post('/verify-payment', protect, async (req, res) => {
       bookingId,
       {
         status: 'confirmed',
-        paymentId: paymentIntent.id,
+        paymentId: session.id,
         paidAt: new Date()
       },
       { new: true }
-    ).populate('hotelId');
+    ).populate('hotelId', 'title location images');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
 
     res.json({ 
       success: true, 

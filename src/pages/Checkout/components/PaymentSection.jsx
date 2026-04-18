@@ -1,6 +1,7 @@
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 
-const PaymentSection = ({ onPaymentClick }) => {
+const PaymentSection = ({ onPaymentClick, isLoading }) => {
   return (
     <div className="mt-8">
       <h2 className="text-[22px] font-semibold text-gray-900 dark:text-white mb-2">Proceed to payment</h2>
@@ -14,15 +15,25 @@ const PaymentSection = ({ onPaymentClick }) => {
         </p>
       </div>
 
-      <button 
+      <button
         onClick={onPaymentClick}
-        className="bg-[#222222] hover:bg-black text-white px-8 py-3.5 rounded-lg flex items-center justify-center font-bold text-[18px] transition-colors gap-2"
-        style={{ backgroundImage: 'linear-gradient(to right, #000 0%, #111 100%)' }}
+        disabled={isLoading}
+        className="bg-[#222222] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-3.5 rounded-lg flex items-center justify-center font-bold text-[18px] transition-colors gap-2"
+        style={{ backgroundImage: isLoading ? 'none' : 'linear-gradient(to right, #000 0%, #111 100%)' }}
       >
-        <span>Continue to</span>
-        <span className="font-extrabold flex items-center">
-            <span className="text-[#3395FF]">Stripe</span>
-        </span>
+        {isLoading ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Creating session…</span>
+          </>
+        ) : (
+          <>
+            <span>Continue to</span>
+            <span className="font-extrabold flex items-center">
+              <span className="text-[#3395FF]">Stripe</span>
+            </span>
+          </>
+        )}
       </button>
     </div>
   );

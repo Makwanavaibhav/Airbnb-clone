@@ -15,6 +15,7 @@ import Messages from "./pages/Messages/Messages.jsx";
 import Trips from "./pages/Trips/Trips.jsx";
 import Wishlists from "./pages/Wishlists/Wishlists.jsx";
 import AccountSettings from "./pages/AccountSettings/AccountSettings.jsx";
+import BookingSuccess from "./pages/BookingSuccess/BookingSuccess.jsx";
 
 const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
@@ -118,6 +119,14 @@ function App() {
             <ProtectedRoute>
               <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
                 <AccountSettings />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/booking-success" element={
+            <ProtectedRoute>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+                <BookingSuccess />
               </MainLayout>
             </ProtectedRoute>
           } />

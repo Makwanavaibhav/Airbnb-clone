@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -38,44 +38,47 @@ const Checkout = () => {
   const taxes = subtotal * 0.10; // 10% tax
   const total = subtotal + taxes;
   
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+
   const handlePayment = async () => {
-    // Initialize Razorpay or redirect to payment gateway
+    setIsPaying(true);
+    setPaymentError(null);
     try {
-        const response = await fetch("http://localhost:5001/api/bookings/checkout", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
-          },
-          body: JSON.stringify({
-            hotelId: hotel?.id || hotelId,
-            hotelName: hotel?.title || hotel?.name,
-            hotelImage: hotel?.image,
-            startDate: checkIn,
-            endDate: checkOut,
-            totalDays: nights,
-            totalPrice: total,
-            adults: guests?.adults,
-            children: guests?.children,
-            infants: guests?.infants,
-            pets: guests?.pets
-          }),
-        });
-  
-        const resData = await response.json();
-        if (!response.ok) {
-          throw new Error(resData.error || "Failed to initiate booking");
-        }
-  
-        if (resData.url) {
-          window.location.href = resData.url;
-        } else {
-          // Fallback
-          navigate('/?booking_success=true');
-        }
-      } catch (err) {
-        alert(err.message);
+      const response = await fetch('http://localhost:5001/api/bookings/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          hotelId: hotel?.id || hotelId,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          guests: (guests?.adults || 1) + (guests?.children || 0),
+          totalAmount: total,
+        }),
+      });
+
+      const resData = await response.json();
+      console.log('[Checkout] Backend response:', resData);
+
+      if (!response.ok) {
+        throw new Error(resData.message || resData.error || 'Failed to initiate booking');
       }
+
+      if (resData.url) {
+        // Redirect to Stripe Checkout hosted page
+        window.location.href = resData.url;
+      } else {
+        throw new Error('No payment URL returned from server. Check backend logs.');
+      }
+    } catch (err) {
+      console.error('[Checkout] Payment error:', err);
+      setPaymentError(err.message);
+    } finally {
+      setIsPaying(false);
+    }
   };
   
   return (
@@ -91,7 +94,12 @@ const Checkout = () => {
         
         {/* Left column (60% width) */}
         <div className="w-full lg:w-[60%] flex-shrink-0">
-          <PaymentSection onPaymentClick={handlePayment} />
+          {paymentError && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm font-medium">
+              ⚠️ {paymentError}
+            </div>
+          )}
+          <PaymentSection onPaymentClick={handlePayment} isLoading={isPaying} />
         </div>
 
         {/* Right column (40% width) */}
