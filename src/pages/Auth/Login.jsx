@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 const Login = () => {
@@ -7,6 +7,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [error, setError] = useState("");
 
@@ -25,7 +26,8 @@ const Login = () => {
       
       // Pass token + user profile so name shows in About Me
       login(data.token, data.user || { email });
-      navigate('/');
+      const fromUrl = location.state?.from?.pathname || '/';
+      navigate(fromUrl, { replace: true });
     } catch (err) {
       setError(err.message);
     }

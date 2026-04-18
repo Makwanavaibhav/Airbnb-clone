@@ -74,29 +74,67 @@ export function HotelCard({ hotel }) {
         </div>
         
         <p className="text-[15px] text-gray-500 dark:text-gray-400 font-light truncate">{hotel.title}</p>
-        <p className="text-[15px] text-gray-500 dark:text-gray-400 font-light truncate">{hotel.period}</p>
+        
+        {/* Host Info */}
+        {(hotel.host?.name || hotel.hostName) && (
+          <div className="flex items-center gap-2 mt-1 mb-1">
+            <img 
+              src={hotel.host?.image || 'https://a0.muscache.com/im/pictures/user/User-83344331-50e5-4f38-bc06-2d3fb84cdbd7.jpg'} 
+              alt={hotel.host?.name || hotel.hostName}
+              className="w-5 h-5 rounded-full object-cover"
+            />
+            <span className="text-[13px] text-gray-600 dark:text-gray-300">Hosted by {hotel.host?.name || hotel.hostName}</span>
+          </div>
+        )}
         
         <div className="mt-1 flex items-baseline gap-1">
-          <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">{hotel.price}</span>
+          <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">{hotel.price || (hotel.priceRaw ? `₹${hotel.priceRaw}` : '₹0')}</span>
           <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">night</span>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-3 flex gap-2">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(`/checkout/${hotel._id || hotel.id}`);
+            }}
+            className="flex-1 bg-airbnb hover:bg-rose-600 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition-colors"
+          >
+            Book Now
+          </button>
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              if (!isLoggedIn) {
+                navigate('/login');
+              } else {
+                navigate(`/messages?hotelId=${hotel._id || hotel.id}&hostId=${hotel.hostId}`);
+              }
+            }}
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 font-medium py-1.5 px-3 rounded-lg text-sm transition-colors"
+          >
+            Chat with Host
+          </button>
         </div>
       </div>
     </Link>
   );
 }
 
-function Card({ hotels, title, layout = "grid" }) {
+function Card({ hotels, title, layout = "scroll" }) {
   if (!hotels || hotels.length === 0) return null;
 
-  if (layout === "scroll") {
+  if (layout === "grid") {
     return (
-      <div className="mb-10 w-full overflow-hidden">
+      <div className="mb-10 w-full">
         {title && <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">{title}</h2>}
-        <div className="flex gap-5 overflow-x-auto pb-6 scrollbar-hide snap-x">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 xs:gap-8">
           {hotels.map((hotel) => (
-            <div key={`hotel-${hotel.id || hotel._id}`} className="min-w-[280px] md:min-w-[320px] snap-start">
-              <HotelCard hotel={hotel} />
-            </div>
+            <HotelCard
+              key={`hotel-${hotel.id || hotel._id}`}
+              hotel={hotel}
+            />
           ))}
         </div>
       </div>
@@ -104,14 +142,13 @@ function Card({ hotels, title, layout = "grid" }) {
   }
 
   return (
-    <div className="mb-10 w-full">
+    <div className="mb-10 w-full overflow-hidden">
       {title && <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">{title}</h2>}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 xs:gap-8">
+      <div className="flex gap-5 overflow-x-auto pb-6 scrollbar-hide snap-x">
         {hotels.map((hotel) => (
-          <HotelCard
-            key={`hotel-${hotel.id || hotel._id}`}
-            hotel={hotel}
-          />
+          <div key={`hotel-${hotel.id || hotel._id}`} className="min-w-[280px] md:min-w-[320px] snap-start">
+            <HotelCard hotel={hotel} />
+          </div>
         ))}
       </div>
     </div>

@@ -43,20 +43,20 @@ const TripCard = ({ trip, onCancel }) => {
         <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
           <p className="font-semibold">₹ {trip.totalAmount}</p>
           <div className="flex gap-2">
+            {trip.status === 'confirmed' && hotel?.hostId && (
+              <button 
+                onClick={() => navigate(`/messages?hostId=${hotel.hostId}`)}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black text-sm font-medium transition-colors"
+              >
+                Message Host
+              </button>
+            )}
             <button 
               onClick={() => navigate(`/hotel/${hotel._id || hotel.id}`)}
               className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
             >
               View Details
             </button>
-            {hotel.hostId && (
-              <button 
-                onClick={() => navigate(`/messages?hostId=${hotel.hostId}`)}
-                className="px-4 py-2 border border-[#FF385C] text-[#FF385C] rounded-lg hover:bg-rose-50 text-sm font-medium transition-colors"
-              >
-                Message Host
-              </button>
-            )}
             {trip.status === 'confirmed' && new Date(trip.checkInDate) > new Date() && (
               <button 
                 onClick={() => onCancel(trip._id)}

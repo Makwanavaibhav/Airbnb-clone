@@ -66,7 +66,7 @@ function CitySection({ cityKey, title }) {
 
   if (hotels.length === 0) return null;
 
-  return <Card hotels={hotels} title={title} layout="scroll" />;
+  return <Card hotels={hotels} title={title} />;
 }
 
 // ─── Search Section for Dynamic Results ──────────────────────────────────────────
@@ -145,37 +145,40 @@ import { useSearch } from "../../context/SearchContext.jsx";
 function Cards({ activeTab }) {
   const { appliedSearch } = useSearch();
   const searchDest = (appliedSearch?.destination || "").toLowerCase();
-  
-  const [discoveryCities, setDiscoveryCities] = useState([]);
-  const [loadingCities, setLoadingCities] = useState(false);
+
+  // Fetch dynamic cities from backend
+  const [CITY_ROUTES, setCityRoutes] = useState([
+    { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "rajasthan"] },
+    { key: "goa", title: "Top picks in Goa", match: ["goa", "north goa"] },
+    { key: "mumbai", title: "Places to stay in Mumbai", match: ["mumbai", "maharashtra"] }
+  ]);
 
   useEffect(() => {
-    setLoadingCities(true);
+    let cancelled = false;
     fetch("http://localhost:5001/api/hotels/cities")
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
-          // Map backend cities to format expected by CitySection
-          const formatted = data.cities.map(city => ({
+        if (!cancelled && data.success && data.cities?.length > 0) {
+          const dynamicRoutes = data.cities.map(city => ({
             key: city.toLowerCase(),
-            title: `Popular homes in ${city}`,
+            title: `Top picks in ${city}`,
             match: [city.toLowerCase()]
           }));
-          setDiscoveryCities(formatted);
+          setCityRoutes(dynamicRoutes);
         }
       })
-      .catch(err => console.error("Error fetching discovery cities:", err))
-      .finally(() => setLoadingCities(false));
+      .catch(err => console.error("Could not fetch dynamic cities", err));
+    return () => { cancelled = true; };
   }, []);
 
   // If searchDest is empty or contains "nearby", show all predefined sections.
   // Otherwise, use deep search.
   const isDefaultView = !searchDest || searchDest === "nearby" || searchDest === "anywhere" || searchDest === "destination";
   
-  const isHardcodedMatch = discoveryCities.some(r => r.match.some(kw => searchDest.includes(kw)));
+  const isHardcodedMatch = CITY_ROUTES.some(r => r.match.some(kw => searchDest.includes(kw) || kw.includes(searchDest)));
   const useSearchEndpoint = !isDefaultView && !isHardcodedMatch;
 
-  const filteredRoutes = discoveryCities.filter((r) => 
+  const filteredRoutes = CITY_ROUTES.filter((r) => 
       !isDefaultView ? r.match.some((kw) => searchDest.includes(kw) || kw.includes(searchDest)) : true
   );
 

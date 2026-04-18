@@ -102,6 +102,18 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
   }
 });
 
+// GET /api/hotels/cities
+router.get("/cities", async (req, res) => {
+  try {
+    const locations = await Hotel.distinct("location");
+    // Extract unique cities (using the part before first comma)
+    const uniqueCities = [...new Set(locations.map(loc => loc.split(',')[0].trim()))].filter(Boolean);
+    res.json({ success: true, cities: uniqueCities });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch cities" });
+  }
+});
+
 // GET /api/hotels/search — Advanced Search endpoint
 router.get("/search", async (req, res) => {
   try {
@@ -257,24 +269,5 @@ router.get("/", async (req, res) => {
   }
 });
 
-
-// GET /api/hotels/cities - Dynamic city discovery for Home page (Fix #13)
-router.get("/cities", async (req, res) => {
-  try {
-    // Get all unique locations
-    const locations = await Hotel.distinct("location");
-    
-    // Extract cities (assuming "City, State" or "City" format)
-    const citiesSet = new Set();
-    locations.filter(Boolean).forEach(loc => {
-      const city = loc.split(',')[0].trim();
-      if (city) citiesSet.add(city);
-    });
-
-    res.json({ success: true, cities: Array.from(citiesSet) });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 module.exports = router;

@@ -57,7 +57,7 @@ router.get('/my-trips', protect, async (req, res) => {
     }
 
     const trips = await Booking.find(query)
-      .populate('hotelId', 'title images location price rating hostId')
+      .populate('hotelId', 'title image images location price priceRaw pricePerNight rating hostId')
       .sort({ checkInDate: -1 });
 
     res.json({ 
