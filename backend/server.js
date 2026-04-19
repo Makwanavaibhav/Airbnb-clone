@@ -68,7 +68,6 @@ app.use("/api/hotels", hotelRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", require("./routes/messageRoutes"));
-app.use("/api/reviews", require("./routes/reviewRoutes"));
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
@@ -77,11 +76,10 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-<<<<<<< HEAD
-  socket.on('join_conversation', async (conversationId) => {
+  socket.on('join_room', async (roomId) => {
     try {
       let authorized = false;
-      const parts = conversationId.split('_');
+      const parts = roomId.split('_');
       
       if (parts.length >= 3) {
         const guestId = parts[1];
@@ -90,9 +88,9 @@ io.on('connection', (socket) => {
           authorized = true;
         }
       } else {
-        // Fallback check: look at messages in this conversation
+        // Fallback check: look at messages in this room
         const Message = require('./models/Message');
-        const msg = await Message.findOne({ conversationId });
+        const msg = await Message.findOne({ conversationId: roomId });
         // If no messages exist yet, or the user is the sender/receiver, allow join
         if (!msg || String(msg.senderId) === String(socket.userId) || String(msg.receiverId) === String(socket.userId)) {
           authorized = true;
@@ -100,19 +98,21 @@ io.on('connection', (socket) => {
       }
 
       if (!authorized) {
-        console.log(`Unauthorized join attempt by ${socket.userId} for room ${conversationId}`);
+        console.log(`Unauthorized join attempt by ${socket.userId} for room ${roomId}`);
         return;
       }
 
-      socket.join(conversationId);
-      console.log(`User joined conversation: ${conversationId}`);
+      socket.join(roomId);
+      console.log(`User joined conversation: ${roomId}`);
     } catch (err) {
       console.error("Error joining conversation:", err);
     }
   });
 
   socket.on('send_message', async (data) => {
-    const { conversationId, senderId, receiverId, message } = data;
+    const { roomId, conversationId, senderId, receiverId, message } = data;
+    const finalConversationId = roomId || conversationId;
+    
     if (!socket.userId || String(socket.userId) !== String(senderId)) {
       return;
     }
@@ -123,48 +123,21 @@ io.on('connection', (socket) => {
 
     const Message = require('./models/Message');
     const newMessage = await Message.create({
-      conversationId,
+      conversationId: finalConversationId,
       senderId,
       receiverId,
       message,
       timestamp: new Date()
     });
 
-    io.to(conversationId).emit('receive_message', newMessage);
-=======
-  socket.on('join_room', (roomId) => {
-    socket.join(roomId);
-    console.log(`User joined room: ${roomId}`);
-  });
-
-  socket.on('send_message', async (data) => {
-    const { roomId, senderId, receiverId, message } = data;
-    
-    // Attempt saving to DB if you have a models/Message.js that supports this,
-    // otherwise it might fail if the schema requires conversationId instead of roomId.
-    // I will use conversationId in DB model to be safe with existing schema.
-    try {
-      const Message = require('./models/Message');
-      const newMessage = await Message.create({
-        conversationId: roomId,
-        senderId,
-        receiverId,
-        message,
-        timestamp: new Date()
-      });
-      // Broadcast to everyone in the room except the sender
-      socket.to(roomId).emit('receive_message', newMessage);
-    } catch (err) {
-      console.error("Error saving message:", err);
-    }
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
+    // Broadcast to everyone in the room EXCEPT the sender
+    socket.to(finalConversationId).emit('receive_message', newMessage);
   });
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
-
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 connectDB()

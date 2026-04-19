@@ -16,27 +16,18 @@ import Trips from "./pages/Trips/Trips.jsx";
 import Wishlists from "./pages/Wishlists/Wishlists.jsx";
 import AccountSettings from "./pages/AccountSettings/AccountSettings.jsx";
 import BookingSuccess from "./pages/BookingSuccess/BookingSuccess.jsx";
-import ExperienceDetail from "./pages/Experiences/ExperienceDetail.jsx";
 
 const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
 // Create a layout component to share Header and Footer
-<<<<<<< HEAD
 function MainLayout({ children, activeTab, setActiveTab, hideFooter = false }) {
-=======
-function MainLayout({ children, activeTab, setActiveTab, showFooter = true }) {
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   return (
     <div className="app flex flex-col min-h-screen">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="grow">
         {children}
       </main>
-<<<<<<< HEAD
       {!hideFooter && <Footer />}
-=======
-      {showFooter && <Footer />}
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     </div>
   );
 }
@@ -63,19 +54,13 @@ function App() {
             </MainLayout>
           } />
 
-          <Route path="/experience/:id" element={
-            <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
-              <ExperienceDetail />
-            </MainLayout>
-          } />
-
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
           {/* Protected Routes */}
           <Route path="/host-dashboard" element={
-            <ProtectedRoute requireHost={true}>
+            <ProtectedRoute>
               <HostDashboard />
             </ProtectedRoute>
           } />
@@ -114,11 +99,7 @@ function App() {
           
           <Route path="/messages" element={
             <ProtectedRoute>
-<<<<<<< HEAD
               <MainLayout activeTab={activtab} setActiveTab={setActivtab} hideFooter={true}>
-=======
-              <MainLayout activeTab={activtab} setActiveTab={setActivtab} showFooter={false}>
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
                 <Messages />
               </MainLayout>
             </ProtectedRoute>

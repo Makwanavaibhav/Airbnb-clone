@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, Loader2, Trash2, Edit2, Calendar, Clock, ChevronRight } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -27,17 +27,27 @@ const HostDashboard = () => {
 
   const userInitial = user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"; // Fix #2
 
-  const loadDrafts = useCallback(() => {
+  const loadDrafts = () => {
     const idx = JSON.parse(localStorage.getItem("listing_drafts_index") || "[]");
     const loaded = idx.map(id => {
       try { return JSON.parse(localStorage.getItem(`listing_draft_${id}`) || "null"); }
       catch { return null; }
     }).filter(Boolean);
     setDrafts(loaded);
-  }, []);
+  };
+
+  useEffect(() => {
+    if (activeTab === "Listings") { fetchListings(); loadDrafts(); }
+    if (activeTab === "Today" || activeTab === "Calendar") fetchHostBookings();
+  }, [activeTab]);
+
+  // Fix #7: refetch when filter changes
+  useEffect(() => {
+    if (activeTab === "Today") fetchHostBookings();
+  }, [todayFilter]);
 
   // Fix #1: call host-reservations not my-trips
-  const fetchHostBookings = useCallback(async () => {
+  const fetchHostBookings = async () => {
     setLoadingBookings(true);
     try {
       const res = await axios.get("http://localhost:5001/api/bookings/host-reservations", {
@@ -70,9 +80,9 @@ const HostDashboard = () => {
     } finally {
       setLoadingBookings(false);
     }
-  }, [activeTab, getToken, todayFilter]);
+  };
 
-  const fetchListings = useCallback(async () => {
+  const fetchListings = async () => {
     setLoadingListings(true);
     try {
       const response = await fetch("http://localhost:5001/api/hotels/host/me", {
@@ -82,29 +92,7 @@ const HostDashboard = () => {
       if (data.success) setProperties(data.properties);
     } catch (err) { console.error(err); }
     finally { setLoadingListings(false); }
-  }, [getToken]);
-
-  useEffect(() => {
-    if (activeTab === "Listings") { fetchListings(); loadDrafts(); }
-    if (activeTab === "Today" || activeTab === "Calendar") fetchHostBookings();
-  }, [activeTab, fetchHostBookings, fetchListings, loadDrafts]);
-
-  // Fix #7: refetch when filter changes
-  useEffect(() => {
-    if (activeTab === "Today") fetchHostBookings();
-  }, [activeTab, todayFilter, fetchHostBookings]);
-
-  useEffect(() => {
-    if (activeTab === "Messages") {
-      navigate("/messages");
-    }
-  }, [activeTab, navigate]);
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate("/login");
-    }
-  }, [isLoggedIn, navigate]);
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this listing?")) return;
@@ -127,7 +115,7 @@ const HostDashboard = () => {
 
   const handleResumeDraft = (draft) => { setResumeDraft(draft); setShowListingForm(true); };
 
-  if (!isLoggedIn) return null;
+  if (!isLoggedIn) { navigate("/login"); return null; }
 
   if (showListingForm) {
     return (
@@ -438,16 +426,6 @@ const HostDashboard = () => {
           </div>
         )}
 
-<<<<<<< HEAD
-        {/* ── MESSAGES TAB ── */}
-        {activeTab === "Messages" && (
-           <div className="w-full flex flex-col items-center mt-20 text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-rose-500 mb-4" />
-              <p className="text-gray-500">Redirecting to your host inbox...</p>
-           </div>
-        )}
-=======
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
 
         {/* ── OTHER TABS (Fallback) ── */}
         {activeTab !== "Today" && activeTab !== "Listings" && activeTab !== "Calendar" && activeTab !== "Messages" && (
@@ -463,70 +441,6 @@ const HostDashboard = () => {
 
     {/* Edit Listing Modal */}
     {editingProperty && (
-<<<<<<< HEAD
-      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col relative shadow-xl">
-          <button onClick={() => setEditingProperty(null)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
-            ✕
-          </button>
-          <h2 className="text-2xl font-semibold mb-6">Edit Listing</h2>
-          
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto px-2">
-             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
-                <input 
-                  type="text" 
-                  value={editingProperty.title || ''} 
-                  onChange={e => setEditingProperty({...editingProperty, title: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nightly Price (₹)</label>
-                <input 
-                  type="number" 
-                  value={editingProperty.pricePerNight || editingProperty.priceRaw || ''} 
-                  onChange={e => setEditingProperty({...editingProperty, pricePerNight: e.target.value, priceRaw: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                <textarea 
-                  rows={4}
-                  value={editingProperty.description || ''} 
-                  onChange={e => setEditingProperty({...editingProperty, description: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black resize-none"
-                />
-             </div>
-          </div>
-          <div className="flex gap-4 mt-6">
-            <button 
-              onClick={() => setEditingProperty(null)} 
-              className="flex-1 py-3 text-black font-semibold rounded-lg hover:bg-gray-100 transition"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={async () => {
-                try {
-                   const res = await axios.put(`http://localhost:5001/api/hotels/${editingProperty._id}`, editingProperty, {
-                     headers: { Authorization: `Bearer ${getToken()}` }
-                   });
-                   if (res.data.success) {
-                      setEditingProperty(null);
-                      fetchListings();
-                   }
-                } catch { alert("Failed to update."); }
-              }} 
-              className="flex-1 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-semibold rounded-lg transition"
-            >
-              Save Changes
-            </button>
-          </div>
-        </div>
-      </div>
-=======
       <EditListingModal 
         property={editingProperty} 
         onClose={() => setEditingProperty(null)}
@@ -536,7 +450,6 @@ const HostDashboard = () => {
           fetchListings();
         }}
       />
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     )}
   </div>
   );

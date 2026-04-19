@@ -1,14 +1,6 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from 'react';
-import MessagesList from './components/MessagesList';
-import EmptyState from './components/EmptyState';
-import { Send } from 'lucide-react';
-import io from 'socket.io-client';
-=======
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
 import { socket } from '../../lib/socket';
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
@@ -49,30 +41,13 @@ function formatTime(ts) {
 
 // ─── Messages Component ──────────────────────────────────────────────────────
 const Messages = () => {
-<<<<<<< HEAD
-  const { user } = useAuth();
-  const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
-  let currentUserId = currentUser.id || currentUser._id;
-  if (!currentUserId && localStorage.getItem('token')) {
-    try {
-      currentUserId = JSON.parse(atob(localStorage.getItem('token').split('.')[1])).userId;
-    } catch(e) {}
-  }
-  
-  const [messages, setMessages] = useState([]);
-  const [userMap, setUserMap] = useState({});
-  const [currentConversation, setCurrentConversation] = useState(null);
-  const [inputText, setInputText] = useState('');
-  const messagesEndRef = React.useRef(null);
-
-  // Auto-scroll to bottom when messages or conversation changes
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, currentConversation]);
-=======
   const { user, getToken } = useAuth();
-  const currentUserId = String(user?.id || user?._id || '');
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
+  
+  let tempId = user?.id || user?._id;
+  if (!tempId && localStorage.getItem('token')) {
+    try { tempId = JSON.parse(atob(localStorage.getItem('token').split('.')[1])).userId; } catch(e) {}
+  }
+  const currentUserId = String(tempId || '');
 
   const [threads, setThreads] = useState([]);      // [{conversationId, lastMsg, otherUser}]
   const [allMessages, setAllMessages] = useState({}); // {convoId: [msgs]}
@@ -136,25 +111,6 @@ const Messages = () => {
 
   // ── 3. Socket.io setup ───────────────────────────────────────────────────
   useEffect(() => {
-<<<<<<< HEAD
-    socket = io('http://localhost:5001', {
-      auth: {
-        token: localStorage.getItem('token'),
-      },
-    });
-    if (currentConversation) {
-      socket.emit('join_conversation', currentConversation);
-    }
-    socket.on('receive_message', (message) => {
-      setMessages(prev => {
-        // Prevent duplicate appending if optimistic update was already added
-        if (prev.some(m => m.timestamp === message.timestamp && m.message === message.message)) {
-           return prev;
-        }
-        return [...prev, message];
-      });
-    });
-=======
     socket.connect();
 
     const handleReceiveMessage = (newMsg) => {
@@ -177,7 +133,6 @@ const Messages = () => {
     };
 
     socket.on('receive_message', handleReceiveMessage);
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
@@ -185,46 +140,16 @@ const Messages = () => {
     };
   }, [currentUserId]);
 
-<<<<<<< HEAD
-  const selectConversation = (convoId) => {
-    setCurrentConversation(convoId);
-  };
-
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || !currentConversation || !currentUserId) return;
-
-    let receiverId = 'placeholder';
-    const parts = currentConversation.split('_');
-    if (parts.length >= 3) {
-      // convention: hotelId_guestId_hostId
-      receiverId = parts[1] === currentUserId ? parts[2] : parts[1];
-    } else {
-      const threadMsg = messages.find(m => m.conversationId === currentConversation);
-      if (threadMsg) {
-         receiverId = threadMsg.senderId === currentUserId ? threadMsg.receiverId : threadMsg.senderId;
-      }
-=======
   // ── 4. Join socket room when active conversation changes ─────────────────
   useEffect(() => {
     if (activeConvo) {
       // Use join_room with the specific roomId (convoId)
       socket.emit('join_room', activeConvo);
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     }
     // Scroll to bottom
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   }, [activeConvo]);
 
-<<<<<<< HEAD
-    const optimisticMsg = {
-      conversationId: currentConversation,
-      senderId: currentUserId,
-      receiverId,
-      message: inputText,
-      timestamp: new Date().toISOString()
-    };
-=======
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -272,26 +197,9 @@ const Messages = () => {
       }
       return [{ conversationId: activeConvo, lastMsg: newLocalMsg, otherUserId: otherId }, ...prev];
     });
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
 
-    setMessages(prev => [...prev, optimisticMsg]);
-    const textToSend = inputText;
     setInputText('');
-<<<<<<< HEAD
-
-    try {
-      socket.emit('send_message', {
-        conversationId: currentConversation,
-        senderId: currentUserId,
-        receiverId: receiverId,
-        message: textToSend
-      });
-    } catch (err) {
-      console.error("Failed to send message", err);
-    }
-=======
     inputRef.current?.focus();
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   };
 
   const handleKeyDown = (e) => {
@@ -346,7 +254,6 @@ const Messages = () => {
                   </div>
                 </div>
               ))}
-              <div ref={messagesEndRef} />
             </div>
           ) : threads.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full pb-20 px-6 text-center">

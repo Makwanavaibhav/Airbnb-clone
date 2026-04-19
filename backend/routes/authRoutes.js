@@ -16,11 +16,7 @@ router.post("/register", async (req, res) => {
 
     const newUser = await User.create({ firstName, lastName, dateOfBirth, email, password });
     const token = jwt.sign({ userId: newUser._id, email: newUser.email }, process.env.JWT_SECRET || "default_secret", { expiresIn: "7d" });
-<<<<<<< HEAD
-    res.status(201).json({ message: "User registered successfully", token, user: { _id: newUser._id, firstName: newUser.firstName, lastName: newUser.lastName, email: newUser.email } });
-=======
     res.status(201).json({ message: "User registered successfully", token, user: { _id: newUser._id, id: newUser._id, firstName: newUser.firstName, lastName: newUser.lastName, email: newUser.email } });
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   } catch (err) {
     console.error("Register Error:", err);
     res.status(500).json({ error: "Failed to register user." });
@@ -40,11 +36,7 @@ router.post("/login", async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: "Invalid credentials." });
 
     const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET || "default_secret", { expiresIn: "7d" });
-<<<<<<< HEAD
-    res.json({ token, user: { _id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email } });
-=======
     res.json({ token, user: { _id: user._id, id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email } });
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ error: "Failed to login." });

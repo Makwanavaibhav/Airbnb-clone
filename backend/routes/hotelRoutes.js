@@ -70,7 +70,7 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
     // Parse arrays/JSON strings from FormData
     let parsedAmenities = [];
     if (typeof amenities === 'string') {
-      try { parsedAmenities = JSON.parse(amenities); } catch { parsedAmenities = amenities.split(','); }
+      try { parsedAmenities = JSON.parse(amenities); } catch(e) { parsedAmenities = amenities.split(','); }
     } else if (Array.isArray(amenities)) {
       parsedAmenities = amenities;
     }
@@ -105,13 +105,6 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
 // GET /api/hotels/cities
 router.get("/cities", async (req, res) => {
   try {
-<<<<<<< HEAD
-    const locations = await Hotel.distinct("location");
-    // Extract unique cities (using the part before first comma)
-    const uniqueCities = [...new Set(locations.map(loc => loc.split(',')[0].trim()))].filter(Boolean);
-    res.json({ success: true, cities: uniqueCities });
-  } catch {
-=======
     // Only get distinct locations for non-Experiences
     const locations = await Hotel.find({ propertyType: { $ne: "Experience" } }).distinct("location");
     // Extract unique cities (using the part before first comma), proper case
@@ -125,7 +118,6 @@ router.get("/cities", async (req, res) => {
     });
     res.json({ success: true, cities: Array.from(cityMap.values()) });
   } catch (err) {
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     res.status(500).json({ error: "Failed to fetch cities" });
   }
 });
@@ -133,11 +125,7 @@ router.get("/cities", async (req, res) => {
 // GET /api/hotels/search — Advanced Search endpoint
 router.get("/search", async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { city, minPrice, maxPrice } = req.query;
-=======
     const { city, minPrice, maxPrice, propertyType } = req.query;
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     let filter = {};
 
     if (city) {
@@ -194,7 +182,7 @@ router.get("/host/me", authenticateToken, async (req, res) => {
   try {
     const properties = await Hotel.find({ hostId: req.user._id });
     res.json({ success: true, properties });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch properties" });
   }
 });
@@ -222,12 +210,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
 
     if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
     res.json({ success: true, hotel });
-<<<<<<< HEAD
-  } catch {
-=======
   } catch (err) {
     console.error("PUT /api/hotels/:id error:", err);
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     res.status(500).json({ error: "Failed to update property" });
   }
 });
@@ -235,13 +219,6 @@ router.put("/:id", authenticateToken, async (req, res) => {
 // DELETE /api/hotels/:id — host delete listing
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
-<<<<<<< HEAD
-    const hotel = await Hotel.findOneAndDelete({ _id: req.params.id, hostId: req.user._id });
-    if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
-    res.json({ success: true, message: "Listing deleted" });
-  } catch {
-    res.status(500).json({ error: "Failed to delete property" });
-=======
     const id = req.params.id;
     const hostId = req.user._id;
 
@@ -274,7 +251,6 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("DELETE /api/hotels/:id error:", err);
     res.status(500).json({ error: "Failed to delete property and its associations" });
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   }
 });
 
@@ -299,7 +275,7 @@ router.post("/:id/reviews", authenticateToken, async (req, res) => {
     await Hotel.findByIdAndUpdate(req.params.id, { rating: avgRating.toFixed(1) });
 
     res.status(201).json({ success: true, review });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to post review" });
   }
 });
@@ -309,7 +285,7 @@ router.get("/:id/reviews", async (req, res) => {
   try {
     const reviews = await Review.find({ hotelId: req.params.id }).populate("userId", "firstName lastName");
     res.json({ success: true, reviews });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch reviews" });
   }
 });

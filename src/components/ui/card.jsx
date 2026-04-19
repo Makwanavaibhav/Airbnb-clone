@@ -1,5 +1,4 @@
 import React from "react";
-import { BsHeartFill, BsHeart } from "react-icons/bs";
 import { FiStar } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -61,13 +60,26 @@ export function HotelCard({ hotel }) {
         {/* Favorite Button */}
         <button
           onClick={handleHeartClick}
-          className="absolute top-4 right-4 p-2 z-20 hover:scale-110 active:scale-95 transition-all w-[44px] h-[44px] flex items-center justify-center"
+          className="absolute top-3 right-3 p-2 z-20 hover:scale-105 active:scale-90 transition-transform duration-200"
         >
-          {isFavorite ? (
-            <BsHeartFill className="w-7 h-7 text-airbnb drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" style={{ color: '#FF385C' }} />
-          ) : (
-            <BsHeart className="w-7 h-7 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ strokeWidth: 1.5 }} />
-          )}
+          <svg 
+            viewBox="0 0 32 32" 
+            xmlns="http://www.w3.org/2000/svg" 
+            aria-hidden="true" 
+            role="presentation" 
+            focusable="false" 
+            style={{ 
+              display: 'block', 
+              fill: isFavorite ? '#FF385C' : 'rgba(0, 0, 0, 0.5)', 
+              height: '24px', 
+              width: '24px', 
+              stroke: isFavorite ? '#FF385C' : 'white', 
+              strokeWidth: '2', 
+              overflow: 'visible' 
+            }}
+          >
+            <path d="M16 28c7-4.73 14-10 14-17a6.98 6.98 0 0 0-7-6.94c-2.2 0-4.1.8-5.3 2.1A7.63 7.63 0 0 0 16 7.4a7.63 7.63 0 0 0-1.7-1.24A6.9 6.9 0 0 0 9 4.06 6.98 6.98 0 0 0 2 11c0 7 7 12.27 14 17z"></path>
+          </svg>
         </button>
       </div>
       

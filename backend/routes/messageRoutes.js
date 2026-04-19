@@ -2,22 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
 const User = require('../models/User');
-const { protect } = require('../middleware/authMiddleware');
 
-<<<<<<< HEAD
-// Get all messages for a specific user
-router.get('/:userId', protect, async (req, res) => {
-=======
 const { protect } = require('../middleware/authMiddleware');
 
 // Get all conversations for a user
 router.get('/conversations', protect, async (req, res) => {
->>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   try {
-    if (String(req.user._id) !== String(req.params.userId)) {
-      return res.status(403).json({ error: 'Not authorized to read these messages' });
-    }
-
     const messages = await Message.find({
       $or: [{ senderId: req.user._id }, { receiverId: req.user._id }]
     }).sort({ timestamp: -1 });
