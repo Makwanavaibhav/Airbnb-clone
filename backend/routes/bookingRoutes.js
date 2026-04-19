@@ -117,6 +117,35 @@ router.post('/:bookingId/cancel', protect, async (req, res) => {
   }
 });
 
+// Delete a pending booking permanently
+router.delete('/:bookingId', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findOneAndDelete({
+      _id: req.params.bookingId,
+      userId: req.user._id,
+      status: 'pending'
+    });
+
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Pending booking not found or unauthorized' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Booking removed successfully' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting booking',
+      error: error.message 
+    });
+  }
+});
+
 // Checkout and payment processing
 router.post('/checkout', protect, async (req, res) => {
   try {

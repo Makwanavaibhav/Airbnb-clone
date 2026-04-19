@@ -139,7 +139,13 @@ const HostDashboard = () => {
 
         <div className="hidden md:flex items-center gap-8">
           {["Today", "Calendar", "Listings", "Messages"].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => {
+                if (tab === "Messages") {
+                  navigate("/messages");
+                } else {
+                  setActiveTab(tab);
+                }
+              }}
               className={`pb-7 pt-7 font-medium text-[15px] relative transition-colors ${activeTab === tab ? "text-black" : "text-gray-500 hover:text-gray-900"}`}>
               {tab}
               {activeTab === tab && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-black rounded-full" />}
@@ -418,15 +424,6 @@ const HostDashboard = () => {
           </div>
         )}
 
-        {/* ── MESSAGES TAB ── */}
-        {activeTab === "Messages" && (
-           <div className="w-full flex flex-col items-center mt-20 text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-rose-500 mb-4" />
-              <p className="text-gray-500">Redirecting to your host inbox...</p>
-              {/* Auto redirect to messages page */}
-              {useEffect(() => { navigate("/messages"); }, [])}
-           </div>
-        )}
 
         {/* ── OTHER TABS (Fallback) ── */}
         {activeTab !== "Today" && activeTab !== "Listings" && activeTab !== "Calendar" && activeTab !== "Messages" && (

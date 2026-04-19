@@ -1,8 +1,15 @@
 import React from 'react';
+import { useAuth } from '../../../context/AuthContext';
 
 const ProfileSidebar = ({ activeTab, setActiveTab }) => {
+  const { user } = useAuth();
+  const initial = user?.firstName
+    ? user.firstName[0].toUpperCase()
+    : user?.email
+    ? user.email[0].toUpperCase()
+    : '?';
   const tabs = [
-    { id: 'about', label: 'About me', icon: 'V' },
+    { id: 'about', label: 'About me', icon: initial },
     { id: 'trips', label: 'Past trips', icon: '💼' },
     { id: 'connections', label: 'Connections', icon: '👥' },
   ];
