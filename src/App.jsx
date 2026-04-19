@@ -16,18 +16,19 @@ import Trips from "./pages/Trips/Trips.jsx";
 import Wishlists from "./pages/Wishlists/Wishlists.jsx";
 import AccountSettings from "./pages/AccountSettings/AccountSettings.jsx";
 import BookingSuccess from "./pages/BookingSuccess/BookingSuccess.jsx";
+import ExperienceDetail from "./pages/Experiences/ExperienceDetail.jsx";
 
 const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
 // Create a layout component to share Header and Footer
-function MainLayout({ children, activeTab, setActiveTab }) {
+function MainLayout({ children, activeTab, setActiveTab, showFooter = true }) {
   return (
     <div className="app flex flex-col min-h-screen">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="grow">
         {children}
       </main>
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   );
 }
@@ -51,6 +52,12 @@ function App() {
           <Route path="/hotel/:id" element={
             <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
               <HotelDetails />
+            </MainLayout>
+          } />
+
+          <Route path="/experience/:id" element={
+            <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+              <ExperienceDetail />
             </MainLayout>
           } />
 
@@ -99,7 +106,7 @@ function App() {
           
           <Route path="/messages" element={
             <ProtectedRoute>
-              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab} showFooter={false}>
                 <Messages />
               </MainLayout>
             </ProtectedRoute>

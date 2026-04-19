@@ -105,10 +105,18 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
 // GET /api/hotels/cities
 router.get("/cities", async (req, res) => {
   try {
-    const locations = await Hotel.distinct("location");
-    // Extract unique cities (using the part before first comma)
-    const uniqueCities = [...new Set(locations.map(loc => loc.split(',')[0].trim()))].filter(Boolean);
-    res.json({ success: true, cities: uniqueCities });
+    // Only get distinct locations for non-Experiences
+    const locations = await Hotel.find({ propertyType: { $ne: "Experience" } }).distinct("location");
+    // Extract unique cities (using the part before first comma), proper case
+    const cityMap = new Map();
+    locations.forEach(loc => {
+      const city = loc.split(',')[0].trim();
+      const lower = city.toLowerCase();
+      if (city && !cityMap.has(lower)) {
+        cityMap.set(lower, city);
+      }
+    });
+    res.json({ success: true, cities: Array.from(cityMap.values()) });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch cities" });
   }
@@ -117,7 +125,7 @@ router.get("/cities", async (req, res) => {
 // GET /api/hotels/search — Advanced Search endpoint
 router.get("/search", async (req, res) => {
   try {
-    const { city, minPrice, maxPrice, guests } = req.query;
+    const { city, minPrice, maxPrice, propertyType } = req.query;
     let filter = {};
 
     if (city) {
@@ -129,9 +137,11 @@ router.get("/search", async (req, res) => {
       if (minPrice) filter.pricePerNight.$gte = parseInt(minPrice);
       if (maxPrice) filter.pricePerNight.$lte = parseInt(maxPrice);
     }
+
+    if (propertyType) {
+      filter.propertyType = propertyType;
+    }
     
-    // Currently guests is a string in the DB, this requires a more robust schema for precise integer filtering,
-    // but for now we can rely on standard features if implemented, or return all matching other criteria.
     const hotels = await Hotel.find(filter);
     res.json(hotels);
   } catch (err) {
@@ -149,9 +159,13 @@ router.get("/city/:city", async (req, res) => {
       mumbai:  { $in: ["Mumbai", "Bandra", "Bandra West", "Bandra East", "Andheri West", "mumbai"] },
     };
     const key = req.params.city.toLowerCase();
+    
     const filter = cityMap[key]
       ? { location: cityMap[key] }
       : { location: { $regex: req.params.city, $options: "i" } };
+
+    // Do not include Experiences in the generic city fetch
+    filter.propertyType = { $ne: "Experience" };
 
     const hotels = await Hotel.find(filter);
     res.json(hotels);
@@ -176,14 +190,28 @@ router.get("/host/me", authenticateToken, async (req, res) => {
 // PUT /api/hotels/:id — host update listing
 router.put("/:id", authenticateToken, async (req, res) => {
   try {
-    const hotel = await Hotel.findOneAndUpdate(
-      { _id: req.params.id, hostId: req.user._id },
-      { $set: req.body },
-      { new: true }
-    );
+    const id = req.params.id;
+    const hostId = req.user._id;
+
+    let hotel;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      hotel = await Hotel.findOneAndUpdate(
+        { _id: id, hostId: hostId },
+        { $set: req.body },
+        { new: true }
+      );
+    } else {
+      hotel = await Hotel.findOneAndUpdate(
+        { id: parseInt(id), hostId: hostId },
+        { $set: req.body },
+        { new: true }
+      );
+    }
+
     if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
     res.json({ success: true, hotel });
   } catch (err) {
+    console.error("PUT /api/hotels/:id error:", err);
     res.status(500).json({ error: "Failed to update property" });
   }
 });
@@ -191,11 +219,38 @@ router.put("/:id", authenticateToken, async (req, res) => {
 // DELETE /api/hotels/:id — host delete listing
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
-    const hotel = await Hotel.findOneAndDelete({ _id: req.params.id, hostId: req.user._id });
-    if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
-    res.json({ success: true, message: "Listing deleted" });
+    const id = req.params.id;
+    const hostId = req.user._id;
+
+    // 1. Find the property first to ensure ownership and get its ObjectId
+    let hotel;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      hotel = await Hotel.findOne({ _id: id, hostId: hostId });
+    } else {
+      hotel = await Hotel.findOne({ id: parseInt(id), hostId: hostId });
+    }
+
+    if (!hotel) {
+      return res.status(404).json({ error: "Listing not found or unauthorized" });
+    }
+
+    const hotelObjectId = hotel._id;
+
+    // 2. Cascade delete associated data
+    const Booking = require("../models/Booking");
+    const Review = require("../models/Review");
+
+    await Promise.all([
+      Hotel.deleteOne({ _id: hotelObjectId }),
+      Booking.deleteMany({ hotelId: hotelObjectId }),
+      Review.deleteMany({ hotelId: hotelObjectId })
+    ]);
+
+    console.log(`Permanently deleted listing ${hotelObjectId} and its associations.`);
+    res.json({ success: true, message: "Listing and all associated data permanently deleted" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete property" });
+    console.error("DELETE /api/hotels/:id error:", err);
+    res.status(500).json({ error: "Failed to delete property and its associations" });
   }
 });
 

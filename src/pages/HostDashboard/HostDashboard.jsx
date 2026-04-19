@@ -4,6 +4,7 @@ import { Home, Loader2, Trash2, Edit2, Calendar, Clock, ChevronRight } from "luc
 import { useAuth } from "../../context/AuthContext.jsx";
 import LongLogo from "../../assets/logo/long-logo.png";
 import ListingCreationWizard from "./ListingCreationWizard.jsx";
+import EditListingModal from "./EditListingModal.jsx";
 import UserMenu from "../../components/Header/UserMenu/UserMenu.jsx";
 import axios from "axios";
 
@@ -321,7 +322,8 @@ const HostDashboard = () => {
                         <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
                           <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
                             <img src={prop.image || prop.images?.[0]} alt={prop.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
                             <div className="absolute top-4 right-4 flex gap-2">
                               <button onClick={() => setEditingProperty(prop)}
                                 className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
@@ -437,70 +439,17 @@ const HostDashboard = () => {
         )}
     </div>
 
-    {/* Inline Edit Modal */}
+    {/* Edit Listing Modal */}
     {editingProperty && (
-      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col relative shadow-xl">
-          <button onClick={() => setEditingProperty(null)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
-            ✕
-          </button>
-          <h2 className="text-2xl font-semibold mb-6">Edit Listing</h2>
-          
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto px-2">
-             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
-                <input 
-                  type="text" 
-                  value={editingProperty.title || ''} 
-                  onChange={e => setEditingProperty({...editingProperty, title: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nightly Price (₹)</label>
-                <input 
-                  type="number" 
-                  value={editingProperty.pricePerNight || editingProperty.priceRaw || ''} 
-                  onChange={e => setEditingProperty({...editingProperty, pricePerNight: e.target.value, priceRaw: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                <textarea 
-                  rows={4}
-                  value={editingProperty.description || ''} 
-                  onChange={e => setEditingProperty({...editingProperty, description: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-black resize-none"
-                />
-             </div>
-          </div>
-          <div className="flex gap-4 mt-6">
-            <button 
-              onClick={() => setEditingProperty(null)} 
-              className="flex-1 py-3 text-black font-semibold rounded-lg hover:bg-gray-100 transition"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={async () => {
-                try {
-                   const res = await axios.put(`http://localhost:5001/api/hotels/${editingProperty._id}`, editingProperty, {
-                     headers: { Authorization: `Bearer ${getToken()}` }
-                   });
-                   if (res.data.success) {
-                      setEditingProperty(null);
-                      fetchListings();
-                   }
-                } catch (err) { alert("Failed to update."); }
-              }} 
-              className="flex-1 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-semibold rounded-lg transition"
-            >
-              Save Changes
-            </button>
-          </div>
-        </div>
-      </div>
+      <EditListingModal 
+        property={editingProperty} 
+        onClose={() => setEditingProperty(null)}
+        getToken={getToken}
+        onSuccess={() => {
+          setEditingProperty(null);
+          fetchListings();
+        }}
+      />
     )}
   </div>
   );

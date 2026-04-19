@@ -463,6 +463,7 @@ function ListingCreationWizard({ onClose, draftData }) {
           { id: "Cave", icon: Tent },
           { id: "Container", icon: Box },
           { id: "Cycladic home", icon: Home },
+          { id: "Experience", icon: Star },
         ];
         return (
           <div className="max-w-3xl w-full mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-500 pb-10 mt-10">

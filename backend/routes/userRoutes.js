@@ -181,4 +181,15 @@ router.patch('/preferences', protect, async (req, res) => {
   }
 });
 
+// Get a specific user's public profile (for chat/messaging)
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('firstName lastName image email');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
 module.exports = router;
