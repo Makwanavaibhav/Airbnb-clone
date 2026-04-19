@@ -52,8 +52,8 @@ export const AuthProvider = ({ children }) => {
   const fetchUserProfile = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-    // Only fetch if we don't already have a user with a name
-    if (user?.firstName) return;
+    // Only fetch if we don't already have a user with a name AND an ID
+    if (user?.firstName && (user?._id || user?.id)) return;
     try {
       const res = await axios.get("http://localhost:5001/api/users/me", {
         headers: { Authorization: `Bearer ${token}` }
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       // silently ignore
     }
-  }, [user?.firstName]);
+  }, [user?.firstName, user?._id, user?.id]);
 
   // Toggle wishlist — uses ref to avoid stale closure (Fix #3)
   const toggleWishlist = useCallback(async (hotelId) => {

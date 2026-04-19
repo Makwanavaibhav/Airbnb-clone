@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
 const API = 'http://localhost:5001';
-let socket;
+// let socket; (removed)
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 /**
@@ -53,6 +53,8 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+
+  const socketRef = useRef(null);
 
   // ── 1. Fetch all messages for this user on mount ─────────────────────────
   const loadMessages = useCallback(async () => {
@@ -107,9 +109,10 @@ const Messages = () => {
 
   // ── 3. Socket.io setup ───────────────────────────────────────────────────
   useEffect(() => {
-    socket = io(API, { transports: ['websocket', 'polling'] });
+    const s = io(API, { transports: ['websocket', 'polling'] });
+    socketRef.current = s;
 
-    socket.on('receive_message', (newMsg) => {
+    s.on('receive_message', (newMsg) => {
       const convoId = newMsg.conversationId;
       setAllMessages(prev => ({
         ...prev,
@@ -128,13 +131,13 @@ const Messages = () => {
       });
     });
 
-    return () => socket?.disconnect();
+    return () => s.disconnect();
   }, [currentUserId]);
 
   // ── 4. Join socket room when active conversation changes ─────────────────
   useEffect(() => {
-    if (activeConvo && socket) {
-      socket.emit('join_conversation', activeConvo);
+    if (activeConvo && socketRef.current) {
+      socketRef.current.emit('join_conversation', activeConvo);
     }
     // Scroll to bottom
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -153,7 +156,7 @@ const Messages = () => {
     const otherId = getOtherUserId(activeConvo, currentUserId);
     if (!otherId) return;
 
-    socket.emit('send_message', {
+    socketRef.current?.emit('send_message', {
       conversationId: activeConvo,
       senderId: currentUserId,
       receiverId: otherId,

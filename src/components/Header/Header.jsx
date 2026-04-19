@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import DesktopHeader from "../Header/DesktopHeader.jsx";
 import MobileHeader from "../Mobileview/MobileHeader.jsx";
 
-function Header() {
+function Header({ activeTab, setActiveTab }) {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [activeTab, setActiveTab] = useState("Homes");
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
