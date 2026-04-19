@@ -68,6 +68,7 @@ app.use("/api/hotels", hotelRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", require("./routes/messageRoutes"));
+app.use("/api/reviews", require("./routes/reviewRoutes"));
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
@@ -76,6 +77,7 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
+<<<<<<< HEAD
   socket.on('join_conversation', async (conversationId) => {
     try {
       let authorized = false;
@@ -129,12 +131,40 @@ io.on('connection', (socket) => {
     });
 
     io.to(conversationId).emit('receive_message', newMessage);
+=======
+  socket.on('join_room', (roomId) => {
+    socket.join(roomId);
+    console.log(`User joined room: ${roomId}`);
+  });
+
+  socket.on('send_message', async (data) => {
+    const { roomId, senderId, receiverId, message } = data;
+    
+    // Attempt saving to DB if you have a models/Message.js that supports this,
+    // otherwise it might fail if the schema requires conversationId instead of roomId.
+    // I will use conversationId in DB model to be safe with existing schema.
+    try {
+      const Message = require('./models/Message');
+      const newMessage = await Message.create({
+        conversationId: roomId,
+        senderId,
+        receiverId,
+        message,
+        timestamp: new Date()
+      });
+      // Broadcast to everyone in the room except the sender
+      socket.to(roomId).emit('receive_message', newMessage);
+    } catch (err) {
+      console.error("Error saving message:", err);
+    }
+>>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
   });
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
+
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 connectDB()

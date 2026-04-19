@@ -169,6 +169,34 @@ const PersonalInfo = () => {
           )}
         </div>
       </div>
+
+      {/* Address */}
+      <div className="py-6 border-b border-gray-200">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">Address</h3>
+            {editing === 'address' ? (
+              <div className="mt-4 flex flex-col gap-4 max-w-sm">
+                <input 
+                  className="p-3 border rounded-lg"
+                  value={formData.address || ''}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  placeholder="Add your address"
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => handleSave('address')} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
+                  <button onClick={() => setEditing(null)} className="px-6 py-2 border rounded-lg font-medium hover:bg-gray-50">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500 mt-1">{formData.address || 'Add your address'}</p>
+            )}
+          </div>
+          {editing !== 'address' && (
+            <button onClick={() => setEditing('address')} className="font-semibold underline">Edit</button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

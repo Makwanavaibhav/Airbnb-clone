@@ -53,6 +53,19 @@ const Trips = () => {
     setCancelId(bookingId);
   };
 
+  const handleDeleteBooking = async (bookingId) => {
+    if (window.confirm("Are you sure you want to permanently delete this pending booking?")) {
+      try {
+        await axios.delete(`http://localhost:5001/api/bookings/${bookingId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        fetchTrips();
+      } catch (error) {
+        alert(error.response?.data?.message || 'Failed to delete booking');
+      }
+    }
+  };
+
   const filterTrips = () => {
     const now = new Date();
     switch(activeTab) {
@@ -102,6 +115,7 @@ const Trips = () => {
               key={trip._id} 
               trip={trip} 
               onCancel={handleCancelBooking}
+              onDelete={handleDeleteBooking}
             />
           ))}
         </div>

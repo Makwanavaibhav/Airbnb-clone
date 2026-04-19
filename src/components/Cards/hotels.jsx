@@ -136,7 +136,60 @@ function SearchSection({ searchContext, searchDest }) {
     );
   }
 
-  return <Card hotels={hotels} title={`Search results for "${searchDest}"`} layout="grid" />;
+  return <Card hotels={hotels} title={`Search results for "${searchDest}"`} layout="grid" />;}
+
+// ─── Experience Section ──────────────────────────────────────────────────────────
+function ExperienceSection() {
+  const [experiences, setExperiences] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    fetch("http://localhost:5001/api/hotels/search?propertyType=Experience")
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled) {
+          setExperiences(Array.isArray(data) ? data : []);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) return <SkeletonRow />;
+  
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        Failed to load experiences. <span className="font-mono text-xs opacity-70">{error}</span>
+      </div>
+    );
+  }
+
+  if (experiences.length === 0) {
+    return (
+      <div className="text-center py-20 px-4">
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">No experiences available yet</h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Check back later for new and exciting offline experiences hosted by locals!
+        </p>
+      </div>
+    );
+  }
+
+  // Force URLs to map to /experience/:id
+  const updatedExperiences = experiences.map(exp => ({ ...exp, _isExperience: true }));
+
+  return <Card hotels={updatedExperiences} layout="grid" />;
 }
 
 // ─── Main listing page ────────────────────────────────────────────────────────
@@ -145,32 +198,31 @@ import ExperiencesPage from "../../pages/Experiences/Experiences.jsx";
 import ServicesPage from "../../pages/Services/Services.jsx";
 
 
+// Fixed 3-region sections — each covers the relevant sub-locations
+const CITY_ROUTES = [
+  { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "pichola", "rajasthan"] },
+  { key: "goa",     title: "Top picks in Goa",         match: ["goa", "north goa", "south goa", "calangute", "baga", "anjuna", "panjim", "siolim", "varca"] },
+  { key: "mumbai",  title: "Places to stay in Mumbai",  match: ["mumbai", "bandra", "bandra west", "bandra east", "andheri", "andheri west", "santacruz", "goregaon"] },
+];
+
 function Cards({ activeTab }) {
   const { appliedSearch } = useSearch();
-  const searchDest = (appliedSearch?.destination || "").toLowerCase();
+  const searchDest = (appliedSearch?.destination || "").toLowerCase().trim();
 
-  // Fetch dynamic cities from backend
-  const [CITY_ROUTES, setCityRoutes] = useState([
-    { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "rajasthan"] },
-    { key: "goa", title: "Top picks in Goa", match: ["goa", "north goa"] },
-    { key: "mumbai", title: "Places to stay in Mumbai", match: ["mumbai", "maharashtra"] }
-  ]);
+  const isDefaultView = !searchDest || ["nearby", "anywhere", "destination"].includes(searchDest);
+  const matchedRoutes = CITY_ROUTES.filter(r => r.match.some(kw => searchDest.includes(kw) || kw.includes(searchDest)));
+  const useSearchEndpoint = !isDefaultView && matchedRoutes.length === 0;
 
+<<<<<<< HEAD
   useEffect(() => {
     // Preserving the 3 city view on home page by keeping default CITY_ROUTES
     // Dynamic fetching of cities would overwrite the 3 specific choices below.
   }, []);
+=======
+  // In default view, show all 3 regions; otherwise narrow to matched ones
+  const visibleRoutes = isDefaultView ? CITY_ROUTES : matchedRoutes;
+>>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
 
-  // If searchDest is empty or contains "nearby", show all predefined sections.
-  // Otherwise, use deep search.
-  const isDefaultView = !searchDest || searchDest === "nearby" || searchDest === "anywhere" || searchDest === "destination";
-  
-  const isHardcodedMatch = CITY_ROUTES.some(r => r.match.some(kw => searchDest.includes(kw) || kw.includes(searchDest)));
-  const useSearchEndpoint = !isDefaultView && !isHardcodedMatch;
-
-  const filteredRoutes = CITY_ROUTES.filter((r) => 
-      !isDefaultView ? r.match.some((kw) => searchDest.includes(kw) || kw.includes(searchDest)) : true
-  );
 
   // Styling block
   const sharedStyles = (
@@ -189,9 +241,16 @@ function Cards({ activeTab }) {
   // 1. Experiences Tab
   if (activeTab === "Experiences") {
     return (
+<<<<<<< HEAD
       <div className="w-full">
          <ExperiencesPage />
          {sharedStyles}
+=======
+      <div className="w-full px-6 py-8 max-w-[1120px] mx-auto">
+        <h2 className="text-2xl font-bold mb-6 dark:text-white px-2">Unforgettable activities hosted by locals</h2>
+        <ExperienceSection />
+        {sharedStyles}
+>>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
       </div>
     );
   }
@@ -211,8 +270,8 @@ function Cards({ activeTab }) {
     <div className="w-full px-6 py-8">
       {useSearchEndpoint ? (
          <SearchSection searchContext={appliedSearch} searchDest={searchDest} />
-      ) : filteredRoutes.length > 0 ? (
-        filteredRoutes.map((route) => (
+      ) : visibleRoutes.length > 0 ? (
+        visibleRoutes.map((route) => (
           <CitySection key={route.key} cityKey={route.key} title={route.title} />
         ))
       ) : (

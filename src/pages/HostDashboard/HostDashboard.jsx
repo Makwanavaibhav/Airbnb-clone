@@ -4,6 +4,7 @@ import { Home, Loader2, Trash2, Edit2, Calendar, Clock, ChevronRight } from "luc
 import { useAuth } from "../../context/AuthContext.jsx";
 import LongLogo from "../../assets/logo/long-logo.png";
 import ListingCreationWizard from "./ListingCreationWizard.jsx";
+import EditListingModal from "./EditListingModal.jsx";
 import UserMenu from "../../components/Header/UserMenu/UserMenu.jsx";
 import axios from "axios";
 
@@ -151,7 +152,13 @@ const HostDashboard = () => {
 
         <div className="hidden md:flex items-center gap-8">
           {["Today", "Calendar", "Listings", "Messages"].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => {
+                if (tab === "Messages") {
+                  navigate("/messages");
+                } else {
+                  setActiveTab(tab);
+                }
+              }}
               className={`pb-7 pt-7 font-medium text-[15px] relative transition-colors ${activeTab === tab ? "text-black" : "text-gray-500 hover:text-gray-900"}`}>
               {tab}
               {activeTab === tab && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-black rounded-full" />}
@@ -327,7 +334,8 @@ const HostDashboard = () => {
                         <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
                           <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
                             <img src={prop.image || prop.images?.[0]} alt={prop.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
                             <div className="absolute top-4 right-4 flex gap-2">
                               <button onClick={() => setEditingProperty(prop)}
                                 className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
@@ -430,6 +438,7 @@ const HostDashboard = () => {
           </div>
         )}
 
+<<<<<<< HEAD
         {/* ── MESSAGES TAB ── */}
         {activeTab === "Messages" && (
            <div className="w-full flex flex-col items-center mt-20 text-center">
@@ -437,6 +446,8 @@ const HostDashboard = () => {
               <p className="text-gray-500">Redirecting to your host inbox...</p>
            </div>
         )}
+=======
+>>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
 
         {/* ── OTHER TABS (Fallback) ── */}
         {activeTab !== "Today" && activeTab !== "Listings" && activeTab !== "Calendar" && activeTab !== "Messages" && (
@@ -450,8 +461,9 @@ const HostDashboard = () => {
         )}
     </div>
 
-    {/* Inline Edit Modal */}
+    {/* Edit Listing Modal */}
     {editingProperty && (
+<<<<<<< HEAD
       <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col relative shadow-xl">
           <button onClick={() => setEditingProperty(null)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
@@ -514,6 +526,17 @@ const HostDashboard = () => {
           </div>
         </div>
       </div>
+=======
+      <EditListingModal 
+        property={editingProperty} 
+        onClose={() => setEditingProperty(null)}
+        getToken={getToken}
+        onSuccess={() => {
+          setEditingProperty(null);
+          fetchListings();
+        }}
+      />
+>>>>>>> 322e9ce08a81d9a1adc18d6db9d28395011d8793
     )}
   </div>
   );

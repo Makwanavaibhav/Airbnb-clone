@@ -65,6 +65,14 @@ const TripCard = ({ trip, onCancel }) => {
                 Cancel
               </button>
             )}
+            {trip.status === 'pending' && (
+              <button 
+                onClick={() => onDelete && onDelete(trip._id)}
+                className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
       </div>

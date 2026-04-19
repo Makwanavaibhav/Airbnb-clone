@@ -16,7 +16,8 @@ function DesktopHeader({ activeTab, setActiveTab }) {
   const navigate = useNavigate();
   const isHomePage = location.pathname === "/";
   const isHotelPage = location.pathname.startsWith("/hotel/");
-  const showSearchBar = isHomePage || isHotelPage;
+  const isExperiencePage = location.pathname.startsWith("/experience/");
+  const showSearchBar = isHomePage || isHotelPage || isExperiencePage;
   
   const [selectedHostType, setSelectedHostType] = useState(null);
   const [openLanguageModal, setOpenLanguageModal] = useState(false);

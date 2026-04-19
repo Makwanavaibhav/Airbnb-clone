@@ -28,19 +28,27 @@ export function HotelCard({ hotel }) {
     await toggleWishlist(hotelId);
   };
 
+  const FALLBACK = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80";
+
   const handleError = () => {
-    if (!hasError && imgSrc) {
-      setHasError(true);
-      if (imgSrc.includes('/hotel-')) {
-        setImgSrc(imgSrc.replace('/hotel-', '/Hotel-'));
-      } else if (imgSrc.includes('/Hotel-')) {
-        setImgSrc(imgSrc.replace('/Hotel-', '/hotel-'));
-      }
+    if (hasError || !imgSrc) {
+      // Already tried once — use the Unsplash fallback
+      setImgSrc(FALLBACK);
+      return;
+    }
+    setHasError(true);
+    // Try swapping letter-case of hotel-N.jpeg
+    if (imgSrc.includes('/hotel-')) {
+      setImgSrc(imgSrc.replace('/hotel-', '/Hotel-'));
+    } else if (imgSrc.includes('/Hotel-')) {
+      setImgSrc(imgSrc.replace('/Hotel-', '/hotel-'));
+    } else {
+      setImgSrc(FALLBACK);
     }
   };
 
   return (
-    <Link to={`/hotel/${hotel._id || hotel.id}`} className="flex flex-col gap-3 group cursor-pointer w-full">
+    <Link to={hotel._isExperience ? `/experience/${hotel._id || hotel.id}` : `/hotel/${hotel._id || hotel.id}`} className="flex flex-col gap-3 group cursor-pointer w-full">
       {/* Image container - 16:9 on Mobile, Square on Tablet+ */}
       <div className="relative aspect-[16/9] md:aspect-square overflow-hidden rounded-xl">
         <img 
@@ -89,7 +97,7 @@ export function HotelCard({ hotel }) {
         
         <div className="mt-1 flex items-baseline gap-1">
           <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">{hotel.price || (hotel.priceRaw ? `₹${hotel.priceRaw}` : '₹0')}</span>
-          <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">night</span>
+          <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">{hotel._isExperience ? 'person' : 'night'}</span>
         </div>
 
         {/* Action Buttons */}
@@ -109,7 +117,7 @@ export function HotelCard({ hotel }) {
               if (!isLoggedIn) {
                 navigate('/login');
               } else {
-                navigate(`/messages?hotelId=${hotel._id || hotel.id}&hostId=${hotel.hostId}`);
+                navigate(`/messages?hostId=${hotel.hostId}`);
               }
             }}
             className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 font-medium py-1.5 px-3 rounded-lg text-sm transition-colors"

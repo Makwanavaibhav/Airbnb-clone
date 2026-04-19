@@ -3,7 +3,12 @@ import house from "../../../assets/logo/house.png";
 import Experiences from "../../../assets/logo/Experience.png";
 import Services from "../../../assets/logo/Services.png";
 
+import { useNavigate, useLocation } from "react-router-dom";
+
 function NavItems({ activeTab, setActiveTab }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const navItems = [
     { label: "Homes", icon: house },
     { label: "Experiences", icon: Experiences, badge: "NEW" },
@@ -15,7 +20,12 @@ function NavItems({ activeTab, setActiveTab }) {
       {navItems.map((item) => (
         <button
           key={item.label}
-          onClick={() => setActiveTab(item.label)}
+          onClick={() => {
+            setActiveTab(item.label);
+            if (location.pathname !== "/") {
+              navigate("/");
+            }
+          }}
           className="group relative flex items-center gap-2 pb-2"
         >
           <div className="relative">
