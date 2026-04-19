@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
-import io from 'socket.io-client';
+import { socket } from '../../lib/socket';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
 const API = 'http://localhost:5001';
-// let socket; (removed)
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 /**
@@ -53,8 +52,6 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
-
-  const socketRef = useRef(null);
 
   // ── 1. Fetch all messages for this user on mount ─────────────────────────
   const loadMessages = useCallback(async () => {
@@ -109,10 +106,9 @@ const Messages = () => {
 
   // ── 3. Socket.io setup ───────────────────────────────────────────────────
   useEffect(() => {
-    const s = io(API, { transports: ['websocket', 'polling'] });
-    socketRef.current = s;
+    socket.connect();
 
-    s.on('receive_message', (newMsg) => {
+    const handleReceiveMessage = (newMsg) => {
       const convoId = newMsg.conversationId;
       setAllMessages(prev => ({
         ...prev,
@@ -129,15 +125,21 @@ const Messages = () => {
         }
         return [{ conversationId: convoId, lastMsg: newMsg, otherUserId: otherId }, ...prev];
       });
-    });
+    };
 
-    return () => s.disconnect();
+    socket.on('receive_message', handleReceiveMessage);
+
+    return () => {
+      socket.off('receive_message', handleReceiveMessage);
+      socket.disconnect();
+    };
   }, [currentUserId]);
 
   // ── 4. Join socket room when active conversation changes ─────────────────
   useEffect(() => {
-    if (activeConvo && socketRef.current) {
-      socketRef.current.emit('join_conversation', activeConvo);
+    if (activeConvo) {
+      // Use join_room with the specific roomId (convoId)
+      socket.emit('join_room', activeConvo);
     }
     // Scroll to bottom
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -156,11 +158,39 @@ const Messages = () => {
     const otherId = getOtherUserId(activeConvo, currentUserId);
     if (!otherId) return;
 
-    socketRef.current?.emit('send_message', {
-      conversationId: activeConvo,
+    const messageData = {
+      roomId: activeConvo,
       senderId: currentUserId,
       receiverId: otherId,
       message: text
+    };
+
+    socket.emit('send_message', messageData);
+
+    // Update the chat window instantly for the sender (local state)
+    const newLocalMsg = {
+      _id: Date.now().toString(), // temporary ID
+      conversationId: activeConvo,
+      senderId: currentUserId,
+      receiverId: otherId,
+      message: text,
+      timestamp: new Date().toISOString()
+    };
+    
+    setAllMessages(prev => ({
+      ...prev,
+      [activeConvo]: [...(prev[activeConvo] || []), newLocalMsg]
+    }));
+
+    setThreads(prev => {
+      const existing = prev.find(t => t.conversationId === activeConvo);
+      if (existing) {
+        return [
+          { ...existing, lastMsg: newLocalMsg },
+          ...prev.filter(t => t.conversationId !== activeConvo)
+        ];
+      }
+      return [{ conversationId: activeConvo, lastMsg: newLocalMsg, otherUserId: otherId }, ...prev];
     });
 
     setInputText('');

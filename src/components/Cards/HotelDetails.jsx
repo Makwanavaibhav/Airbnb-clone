@@ -453,27 +453,51 @@ const HotelDetails = () => {
           </div>
 
           {/* Map Location */}
-          {data.coordinates && (
-            <div className="py-8">
-              <h2 className="text-[22px] font-semibold mb-6">Where you'll be</h2>
-              <div className="w-full h-[480px] rounded-xl overflow-hidden z-0 relative">
-                <MapContainer
-                  center={data.coordinates}
-                  zoom={13}
-                  scrollWheelZoom={false}
-                  className="w-full h-full"
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Marker position={data.coordinates}>
-                    <Popup>Exact location provided after booking.</Popup>
-                  </Marker>
-                </MapContainer>
+          {(data.coordinates || (data.lat && data.lng)) && (() => {
+            let lat = data.lat || "N/A";
+            let lng = data.lng || "N/A";
+            let center = [0, 0];
+            
+            if (Array.isArray(data.coordinates) && data.coordinates.length >= 2) {
+              lat = data.coordinates[0];
+              lng = data.coordinates[1];
+              center = [lat, lng];
+            } else if (data.coordinates && !Array.isArray(data.coordinates) && data.coordinates.lat !== undefined) {
+              lat = data.coordinates.lat;
+              lng = data.coordinates.lng;
+              center = [lat, lng];
+            } else if (data.lat !== undefined && data.lng !== undefined) {
+              center = [data.lat, data.lng];
+            } else {
+              center = [28.6139, 77.2090]; // Default to New Delhi if completely missing
+            }
+
+            return (
+              <div className="py-8">
+                <h2 className="text-[22px] font-semibold mb-6">Where you'll be</h2>
+                <div className="mb-4 text-[15px] text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Latitude:</span> {lat} <span className="mx-2">|</span>
+                  <span className="font-semibold">Longitude:</span> {lng}
+                </div>
+                <div className="w-full h-[480px] rounded-xl overflow-hidden z-0 relative">
+                  <MapContainer
+                    center={center}
+                    zoom={13}
+                    scrollWheelZoom={false}
+                    className="w-full h-full"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <Marker position={center}>
+                      <Popup>Exact location provided after booking.</Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Permanent Date Picker Section */}
           <div ref={calendarRef} className="py-8 border-t dark:border-gray-700">

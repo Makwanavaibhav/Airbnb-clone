@@ -1,0 +1,43 @@
+{
+  "host": {
+    "name": "Demo Host",
+    "image": "https://a0.muscache.com/im/pictures/user/User-83344331-50e5-4f38-bc06-2d3fb84cdbd7.jpg"
+  },
+  "_id": "69e4ac113331af30588b39e1",
+  "title": "Apartment in Udaipur",
+  "location": "Udaipur",
+  "pricePerNight": 6207,
+  "priceRaw": 6207,
+  "price": "₹6,207",
+  "rating": 4.8,
+  "images": [
+    "https://airbnbclone-310342906720-eu-north-1-an.s3.eu-north-1.amazonaws.com/hotels/hotel-1.jpeg"
+  ],
+  "image": "https://airbnbclone-310342906720-eu-north-1-an.s3.eu-north-1.amazonaws.com/hotels/hotel-1.jpeg",
+  "hostName": "Demo Host",
+  "description": "Experience a wonderful stay in this beautiful location. This place offers a blend of modern amenities and local charm, perfect for your next getaway.",
+  "guests": 4,
+  "bedrooms": 2,
+  "beds": 2,
+  "baths": 1,
+  "amenities": [
+    "Wifi",
+    "Kitchen",
+    "Free parking",
+    "Air conditioning"
+  ],
+  "hostId": "69e4abc585bdc9df752c81e4",
+  "propertyType": "Home",
+  "coordinates": [],
+  "minNights": 1,
+  "maxNights": 30,
+  "instantBook": false,
+  "requiresVerifiedId": false,
+  "cancellationPolicy": "Flexible",
+  "advanceNotice": "Same day",
+  "prepTime": "None",
+  "__v": 0,
+  "createdAt": "2026-04-19T10:18:57.563Z",
+  "updatedAt": "2026-04-19T10:18:57.563Z",
+  "id": "69e4ac113331af30588b39e1"
+}
