@@ -42,7 +42,7 @@ function NavItems({ activeTab, setActiveTab }) {
           </span>
 
           {activeTab === item.label && (
-            <div className="absolute bottom-0 left-0 w-full h-0.75 bg-black dark:bg-white rounded-full" />
+            <div className="absolute bottom-0 left-0 w-full h-[3px] bg-black dark:bg-white rounded-full" />
           )}
         </button>
       ))}

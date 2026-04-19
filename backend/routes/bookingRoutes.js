@@ -140,6 +140,21 @@ router.post('/checkout', protect, async (req, res) => {
     const hotel = await Hotel.findById(hotelId).select('title');
     const hotelTitle = hotel?.title || 'Airbnb Stay';
 
+    // Prevent overlapping active bookings for the same hotel
+    const overlap = await Booking.findOne({
+      hotelId,
+      status: { $in: ['pending', 'confirmed'] },
+      checkInDate: { $lt: new Date(checkOutDate) },
+      checkOutDate: { $gt: new Date(checkInDate) }
+    }).select('_id');
+
+    if (overlap) {
+      return res.status(409).json({
+        success: false,
+        message: 'Selected dates are no longer available'
+      });
+    }
+
     // Save booking as pending BEFORE creating session (so we have a bookingId)
     const booking = await Booking.create({
       userId: req.user._id,
@@ -220,19 +235,36 @@ router.post('/verify-payment', protect, async (req, res) => {
       });
     }
 
-    const booking = await Booking.findByIdAndUpdate(
-      bookingId,
-      {
-        status: 'confirmed',
-        paymentId: session.id,
-        paidAt: new Date()
-      },
-      { new: true }
-    ).populate('hotelId', 'title location images');
-
+    const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
+
+    // Ensure only the booking owner can confirm this payment
+    if (String(booking.userId) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this booking' });
+    }
+
+    // Ensure Stripe session belongs to this booking/user
+    const metadataBookingId = session?.metadata?.bookingId;
+    const metadataUserId = session?.metadata?.userId;
+    if (
+      metadataBookingId !== String(booking._id) ||
+      metadataUserId !== String(req.user._id)
+    ) {
+      return res.status(400).json({ success: false, message: 'Payment session does not match booking' });
+    }
+
+    // Ensure this is the session created for this booking
+    if (booking.paymentId && booking.paymentId !== session.id) {
+      return res.status(400).json({ success: false, message: 'Invalid payment session for booking' });
+    }
+
+    booking.status = 'confirmed';
+    booking.paymentId = session.id;
+    booking.paidAt = new Date();
+    await booking.save();
+    await booking.populate('hotelId', 'title location images');
 
     res.json({ 
       success: true, 

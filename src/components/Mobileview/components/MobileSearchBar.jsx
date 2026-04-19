@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Search, X, MapPin } from "lucide-react";
 import { useSearch } from "../../../context/SearchContext.jsx";
 
@@ -6,18 +6,9 @@ import { useSearch } from "../../../context/SearchContext.jsx";
 const MOCK_DESTINATIONS = ["Nearby", "Mumbai", "Goa", "Udaipur", "Jaipur", "Delhi", "Lonavala"];
 
 function MobileSearchBar() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [step, setStep] = useState(1); // 1: Where, 2: When, 3: Who
   const { appliedSearch, setAppliedSearch, searchState, setSearchState } = useSearch();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleSearch = () => {
     setAppliedSearch({ ...searchState });

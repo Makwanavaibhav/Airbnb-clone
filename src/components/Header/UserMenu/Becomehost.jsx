@@ -92,6 +92,9 @@ const AuthModal = ({ isOpen, onClose, isTransparent }) => {
             We’ll call or text you to confirm your number. Standard message and data rates apply. 
             <span className="font-semibold underline ml-1 cursor-pointer">Privacy Policy</span>
           </p>
+          <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
+            Selected country code: {countryCode}
+          </p>
 
           <Button
             onClick={() => {

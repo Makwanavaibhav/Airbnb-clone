@@ -141,6 +141,9 @@ function SearchSection({ searchContext, searchDest }) {
 
 // ─── Main listing page ────────────────────────────────────────────────────────
 import { useSearch } from "../../context/SearchContext.jsx";
+import ExperiencesPage from "../../pages/Experiences/Experiences.jsx";
+import ServicesPage from "../../pages/Services/Services.jsx";
+
 
 function Cards({ activeTab }) {
   const { appliedSearch } = useSearch();
@@ -154,21 +157,8 @@ function Cards({ activeTab }) {
   ]);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch("http://localhost:5001/api/hotels/cities")
-      .then(res => res.json())
-      .then(data => {
-        if (!cancelled && data.success && data.cities?.length > 0) {
-          const dynamicRoutes = data.cities.map(city => ({
-            key: city.toLowerCase(),
-            title: `Top picks in ${city}`,
-            match: [city.toLowerCase()]
-          }));
-          setCityRoutes(dynamicRoutes);
-        }
-      })
-      .catch(err => console.error("Could not fetch dynamic cities", err));
-    return () => { cancelled = true; };
+    // Preserving the 3 city view on home page by keeping default CITY_ROUTES
+    // Dynamic fetching of cities would overwrite the 3 specific choices below.
   }, []);
 
   // If searchDest is empty or contains "nearby", show all predefined sections.
@@ -199,12 +189,9 @@ function Cards({ activeTab }) {
   // 1. Experiences Tab
   if (activeTab === "Experiences") {
     return (
-      <div className="w-full px-6 py-20 text-center">
-        <h2 className="text-3xl font-semibold mb-3 dark:text-white">Experiences coming soon</h2>
-        <p className="text-gray-500 max-w-md mx-auto">
-          We're partnering with local guides in {appliedSearch?.destination || "your area"} to bring you unforgettable activities.
-        </p>
-        {sharedStyles}
+      <div className="w-full">
+         <ExperiencesPage />
+         {sharedStyles}
       </div>
     );
   }
@@ -212,17 +199,9 @@ function Cards({ activeTab }) {
   // 2. Services Tab
   if (activeTab === "Services") {
     return (
-      <div className="w-full px-6 py-20 text-center">
-        <h2 className="text-3xl font-semibold mb-3 dark:text-white">Services in {appliedSearch?.destination || "your area"}</h2>
-        <p className="text-gray-500 max-w-md mx-auto">
-          From private chefs to daily housekeeping, professional services are coming to Airbnb.
-        </p>
-        <div className="flex justify-center gap-4 mt-8 opacity-60">
-          <span className="text-4xl">👨‍🍳</span>
-          <span className="text-4xl">💆</span>
-          <span className="text-4xl">📸</span>
-        </div>
-        {sharedStyles}
+      <div className="w-full">
+         <ServicesPage />
+         {sharedStyles}
       </div>
     );
   }

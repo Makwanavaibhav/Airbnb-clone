@@ -1,7 +1,7 @@
 import Cards from "../src/components/Cards/hotels.jsx";
 import Header from "./components/Header/Header.jsx";
 import Footer from "./components/Footer/Footer.jsx";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HotelDetails from "./components/Cards/HotelDetails.jsx";
 import Login from "./pages/Auth/Login.jsx";
@@ -20,14 +20,14 @@ import BookingSuccess from "./pages/BookingSuccess/BookingSuccess.jsx";
 const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
 // Create a layout component to share Header and Footer
-function MainLayout({ children, activeTab, setActiveTab }) {
+function MainLayout({ children, activeTab, setActiveTab, hideFooter = false }) {
   return (
     <div className="app flex flex-col min-h-screen">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="grow">
         {children}
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </div>
   );
 }
@@ -99,7 +99,7 @@ function App() {
           
           <Route path="/messages" element={
             <ProtectedRoute>
-              <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
+              <MainLayout activeTab={activtab} setActiveTab={setActivtab} hideFooter={true}>
                 <Messages />
               </MainLayout>
             </ProtectedRoute>

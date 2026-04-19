@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import BookingSummary from './components/BookingSummary';
 import PaymentSection from './components/PaymentSection';
 import PriceBreakdown from './components/PriceBreakdown';
@@ -10,10 +9,12 @@ const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { hotelId } = useParams();
-  const { user } = useAuth();
   
   // Get booking details from navigation state
   const { hotel, checkIn, checkOut, guests } = location.state || {};
+
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
   
   // Redirect if no booking data
   useEffect(() => {
@@ -38,9 +39,6 @@ const Checkout = () => {
   const taxes = subtotal * 0.10; // 10% tax
   const total = subtotal + taxes;
   
-  const [isPaying, setIsPaying] = useState(false);
-  const [paymentError, setPaymentError] = useState(null);
-
   const handlePayment = async () => {
     setIsPaying(true);
     setPaymentError(null);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import TripCard from './components/TripCard';
@@ -10,11 +10,7 @@ const Trips = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchTrips();
-  }, [activeTab]);
-
-  const fetchTrips = async () => {
+  const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -31,7 +27,11 @@ const Trips = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, navigate]);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   const [cancelId, setCancelId] = useState(null);
 

@@ -18,10 +18,9 @@ const ProtectedRoute = ({ children, requireHost = false }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If you later add roles to user, you can enable this check.
-  // if (requireHost && user?.role !== 'host') {
-  //   return <Navigate to="/" replace />;
-  // }
+  if (requireHost && !user?.isHost) {
+    return <Navigate to="/" replace />;
+  }
 
   return children;
 };

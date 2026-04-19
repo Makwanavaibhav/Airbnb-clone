@@ -155,14 +155,22 @@ router.post('/change-password', protect, async (req, res) => {
 router.patch('/preferences', protect, async (req, res) => {
   try {
     const { language, currency, timezone } = req.body;
+    const existingUser = await User.findById(req.user._id).select('preferences');
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
       {
         preferences: {
-          language: language || user.preferences?.language,
-          currency: currency || user.preferences?.currency,
-          timezone: timezone || user.preferences?.timezone
+          language: language || existingUser.preferences?.language,
+          currency: currency || existingUser.preferences?.currency,
+          timezone: timezone || existingUser.preferences?.timezone
         }
       },
       { new: true }

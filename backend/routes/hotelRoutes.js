@@ -70,7 +70,7 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
     // Parse arrays/JSON strings from FormData
     let parsedAmenities = [];
     if (typeof amenities === 'string') {
-      try { parsedAmenities = JSON.parse(amenities); } catch(e) { parsedAmenities = amenities.split(','); }
+      try { parsedAmenities = JSON.parse(amenities); } catch { parsedAmenities = amenities.split(','); }
     } else if (Array.isArray(amenities)) {
       parsedAmenities = amenities;
     }
@@ -109,7 +109,7 @@ router.get("/cities", async (req, res) => {
     // Extract unique cities (using the part before first comma)
     const uniqueCities = [...new Set(locations.map(loc => loc.split(',')[0].trim()))].filter(Boolean);
     res.json({ success: true, cities: uniqueCities });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch cities" });
   }
 });
@@ -117,7 +117,7 @@ router.get("/cities", async (req, res) => {
 // GET /api/hotels/search — Advanced Search endpoint
 router.get("/search", async (req, res) => {
   try {
-    const { city, minPrice, maxPrice, guests } = req.query;
+    const { city, minPrice, maxPrice } = req.query;
     let filter = {};
 
     if (city) {
@@ -168,7 +168,7 @@ router.get("/host/me", authenticateToken, async (req, res) => {
   try {
     const properties = await Hotel.find({ hostId: req.user._id });
     res.json({ success: true, properties });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch properties" });
   }
 });
@@ -183,7 +183,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
     );
     if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
     res.json({ success: true, hotel });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to update property" });
   }
 });
@@ -194,7 +194,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
     const hotel = await Hotel.findOneAndDelete({ _id: req.params.id, hostId: req.user._id });
     if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
     res.json({ success: true, message: "Listing deleted" });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to delete property" });
   }
 });
@@ -220,7 +220,7 @@ router.post("/:id/reviews", authenticateToken, async (req, res) => {
     await Hotel.findByIdAndUpdate(req.params.id, { rating: avgRating.toFixed(1) });
 
     res.status(201).json({ success: true, review });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to post review" });
   }
 });
@@ -230,7 +230,7 @@ router.get("/:id/reviews", async (req, res) => {
   try {
     const reviews = await Review.find({ hotelId: req.params.id }).populate("userId", "firstName lastName");
     res.json({ success: true, reviews });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch reviews" });
   }
 });

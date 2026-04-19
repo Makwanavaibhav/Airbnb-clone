@@ -35,7 +35,7 @@ import {
     WaypointsIcon,
 } from "lucide-react"
 import { useTheme } from "next-themes"
-import React, { Suspense, createContext, lazy, useContext, useEffect, useRef, useState } from "react";
+import React, { Suspense, createContext, lazy, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { renderToString } from "react-dom/server"
 import { useMap, useMapEvents } from "react-leaflet";
 
@@ -707,15 +707,15 @@ function MapLocateControl({
         })
     }
 
-    function stopLocating() {
+    const stopLocating = useCallback(() => {
         map.stopLocate()
         map.off("locationfound")
         map.off("locationerror")
         setPosition(null)
         setIsLocating(false)
-    }
+    }, [map, setIsLocating])
 
-    useEffect(() => () => stopLocating(), [])
+    useEffect(() => () => stopLocating(), [stopLocating])
 
     return (
         <MapControlContainer className={cn("right-1 bottom-1", className)}>
@@ -784,27 +784,27 @@ function MapDrawControl({
     const [activeMode, setActiveMode] = useState(null)
     const [layersCount, setLayersCount] = useState(0)
 
-    function updateLayersCount() {
+    const updateLayersCount = useCallback(() => {
         if (featureGroupRef.current) {
             setLayersCount(featureGroupRef.current.getLayers().length)
         }
-    }
+    }, [])
 
-    function handleDrawCreated(event) {
+    const handleDrawCreated = useCallback((event) => {
         if (!featureGroupRef.current) return
         const { layer } = event
         featureGroupRef.current.addLayer(layer)
         onLayersChange?.(featureGroupRef.current)
         updateLayersCount()
         setActiveMode(null)
-    }
+    }, [onLayersChange, updateLayersCount])
 
-    function handleDrawEditedOrDeleted() {
+    const handleDrawEditedOrDeleted = useCallback(() => {
         if (!featureGroupRef.current) return
         onLayersChange?.(featureGroupRef.current)
         updateLayersCount()
         setActiveMode(null)
-    }
+    }, [onLayersChange, updateLayersCount])
 
     useEffect(() => {
         if (!L || !LeafletDraw || !map) return
@@ -818,7 +818,7 @@ function MapDrawControl({
             map.off(L.Draw.Event.EDITED, handleDrawEditedOrDeleted)
             map.off(L.Draw.Event.DELETED, handleDrawEditedOrDeleted)
         };
-    }, [L, LeafletDraw, map, onLayersChange])
+    }, [L, LeafletDraw, map, handleDrawCreated, handleDrawEditedOrDeleted])
 
     return (
         <MapDrawContext.Provider
@@ -1069,7 +1069,7 @@ function MapDrawActionButton(
             control.disable?.()
             controlRef.current = null
         };
-    }, [L, map, isActive, featureGroup, createDrawTool])
+    }, [L, map, isActive, featureGroup, createDrawTool, controlRef])
 
     function handleClick() {
         controlRef.current?.save()
@@ -1129,7 +1129,7 @@ function MapDrawEdit({
         L.drawLocal.edit.handlers.remove.tooltip = {
             text: "Click on a shape to remove.",
         }
-    }, [mapDrawHandleIcon])
+    }, [L, mapDrawHandleIcon])
 
     return (
         <MapDrawActionButton

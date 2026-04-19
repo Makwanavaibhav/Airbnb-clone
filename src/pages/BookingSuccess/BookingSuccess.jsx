@@ -38,7 +38,7 @@ const BookingSuccess = () => {
           setStatus('error');
           setErrorMsg(data.message || 'Payment verification failed.');
         }
-      } catch (err) {
+      } catch {
         setStatus('error');
         setErrorMsg('Network error. Please contact support.');
       }

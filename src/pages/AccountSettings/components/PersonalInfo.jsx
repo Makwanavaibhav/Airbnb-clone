@@ -31,7 +31,7 @@ const PersonalInfo = () => {
             address: u.address || ''
           }));
         }
-      } catch (error) {
+      } catch {
         // Fallback to local storage
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (user.email) {
@@ -47,7 +47,7 @@ const PersonalInfo = () => {
     fetchProfile();
   }, []);
 
-  const handleSave = async (field) => {
+  const handleSave = async () => {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.patch('http://localhost:5001/api/users/profile', 
@@ -90,7 +90,7 @@ const PersonalInfo = () => {
                   placeholder="Last name"
                 />
                 <div className="flex gap-2">
-                  <button onClick={() => handleSave('name')} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
+                  <button onClick={() => handleSave()} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
                   <button onClick={() => setEditing(null)} className="px-6 py-2 border rounded-lg font-medium hover:bg-gray-50">Cancel</button>
                 </div>
               </div>
@@ -128,7 +128,7 @@ const PersonalInfo = () => {
                   placeholder="Add your phone number"
                 />
                 <div className="flex gap-2">
-                  <button onClick={() => handleSave('phone')} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
+                  <button onClick={() => handleSave()} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
                   <button onClick={() => setEditing(null)} className="px-6 py-2 border rounded-lg font-medium hover:bg-gray-50">Cancel</button>
                 </div>
               </div>
@@ -156,7 +156,7 @@ const PersonalInfo = () => {
                   onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
                 />
                 <div className="flex gap-2">
-                  <button onClick={() => handleSave('dob')} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
+                  <button onClick={() => handleSave()} className="px-6 py-2 bg-black text-white rounded-lg font-medium">Save</button>
                   <button onClick={() => setEditing(null)} className="px-6 py-2 border rounded-lg font-medium hover:bg-gray-50">Cancel</button>
                 </div>
               </div>

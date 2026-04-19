@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       });
       const items = res.data.wishlist || [];
       setWishlistIds(new Set(items.map(h => String(h._id || h.id))));
-    } catch (e) {
+    } catch {
       // silently ignore — backend may be starting
     }
   }, []);
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("user", JSON.stringify(profile));
         setUser(profile);
       }
-    } catch (e) {
+    } catch {
       // silently ignore
     }
   }, [user?.firstName]);

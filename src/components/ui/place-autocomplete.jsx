@@ -101,7 +101,13 @@ function useDebounce(value, delay = 300) {
 function usePlaceSearch({
     debounceMs,
     query,
-    ...props
+    lang,
+    limit,
+    bbox,
+    lat,
+    lon,
+    zoom,
+    locationBiasScale
 }) {
     const [results, setResults] = React.useState([])
     const [isLoading, setIsLoading] = React.useState(false)
@@ -126,7 +132,16 @@ function usePlaceSearch({
             setHasSearched(true)
 
             try {
-                const url = buildSearchUrl({ query: debouncedQuery, ...props })
+                const url = buildSearchUrl({
+                    query: debouncedQuery,
+                    lang,
+                    limit,
+                    bbox,
+                    lat,
+                    lon,
+                    zoom,
+                    locationBiasScale
+                })
                 const response = await fetch(url, {
                     signal: abortController.signal,
                 })
@@ -159,13 +174,13 @@ function usePlaceSearch({
         return () => abortController.abort();
     }, [
         debouncedQuery,
-        props.lang,
-        props.limit,
-        props.bbox,
-        props.lat,
-        props.lon,
-        props.zoom,
-        props.locationBiasScale,
+        lang,
+        limit,
+        bbox,
+        lat,
+        lon,
+        zoom,
+        locationBiasScale,
     ])
 
     return { results, isLoading, error, hasSearched }

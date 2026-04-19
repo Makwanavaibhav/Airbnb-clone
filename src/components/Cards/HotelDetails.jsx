@@ -170,7 +170,7 @@ const HotelDetails = () => {
   
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [isReserving, setIsReserving] = useState(false);
+  const [isReserving] = useState(false);
   const [bookingError, setBookingError] = useState(null);
   
   // Custom DatePicker states
@@ -249,6 +249,27 @@ const HotelDetails = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+  if (loading) return <DetailSkeleton />;
+
+  if (error) {
+    return (
+      <div className="max-w-[1120px] mx-auto px-6 py-24 text-center">
+        <p className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Could not load this listing.</p>
+        <p className="text-sm text-red-500 font-mono">{error}</p>
+      </div>
+    );
+  }
+
+  // BUG 1 Fix: Fallback for missing data to prevent white screen crashes
+  if (!data || Object.keys(data).length === 0) {
+    return (
+      <div className="max-w-[1120px] mx-auto px-6 py-24 text-center">
+        <p className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Hotel not found.</p>
+        <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-black text-white rounded">Go back home</button>
+      </div>
+    );
+  }
+
   const handleSubmitReview = async () => {
     if (!newReviewText.trim()) return;
     setSubmittingReview(true);
@@ -295,17 +316,6 @@ const HotelDetails = () => {
   const rightMonth    = rightMonthRaw % 12;
   const rightYear     = rightMonthRaw > 11 ? leftYear + 1 : leftYear;
 
-  if (loading) return <DetailSkeleton />;
-
-  if (error) {
-    return (
-      <div className="max-w-[1120px] mx-auto px-6 py-24 text-center">
-        <p className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Could not load this listing.</p>
-        <p className="text-sm text-red-500 font-mono">{error}</p>
-      </div>
-    );
-  }
-
   const calculateDays = () => {
     if (startDate && endDate) {
       return Math.ceil(Math.abs(endDate - startDate) / (1000 * 60 * 60 * 24));
@@ -314,7 +324,7 @@ const HotelDetails = () => {
   };
 
   const days = calculateDays();
-  const totalPrice = data.priceRaw * days;
+  const totalPrice = (data?.priceRaw || 0) * days;
   const serviceFee = Math.round(totalPrice * 0.14);
   const total = totalPrice + serviceFee;
 
@@ -744,4 +754,32 @@ const HotelDetails = () => {
   );
 };
 
-export default HotelDetails;
+// Error Boundary for HotelDetails
+class HotelDetailsErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-[1120px] mx-auto px-6 py-24 text-center">
+          <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
+          <p className="text-red-500">{this.state.error?.message}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function HotelDetailsWrapper(props) {
+  return (
+    <HotelDetailsErrorBoundary>
+      <HotelDetails {...props} />
+    </HotelDetailsErrorBoundary>
+  );
+}

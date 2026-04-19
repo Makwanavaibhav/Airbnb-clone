@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, Loader2, Trash2, Edit2, Calendar, Clock, ChevronRight } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -26,27 +26,17 @@ const HostDashboard = () => {
 
   const userInitial = user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"; // Fix #2
 
-  const loadDrafts = () => {
+  const loadDrafts = useCallback(() => {
     const idx = JSON.parse(localStorage.getItem("listing_drafts_index") || "[]");
     const loaded = idx.map(id => {
       try { return JSON.parse(localStorage.getItem(`listing_draft_${id}`) || "null"); }
       catch { return null; }
     }).filter(Boolean);
     setDrafts(loaded);
-  };
-
-  useEffect(() => {
-    if (activeTab === "Listings") { fetchListings(); loadDrafts(); }
-    if (activeTab === "Today" || activeTab === "Calendar") fetchHostBookings();
-  }, [activeTab]);
-
-  // Fix #7: refetch when filter changes
-  useEffect(() => {
-    if (activeTab === "Today") fetchHostBookings();
-  }, [todayFilter]);
+  }, []);
 
   // Fix #1: call host-reservations not my-trips
-  const fetchHostBookings = async () => {
+  const fetchHostBookings = useCallback(async () => {
     setLoadingBookings(true);
     try {
       const res = await axios.get("http://localhost:5001/api/bookings/host-reservations", {
@@ -79,9 +69,9 @@ const HostDashboard = () => {
     } finally {
       setLoadingBookings(false);
     }
-  };
+  }, [activeTab, getToken, todayFilter]);
 
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     setLoadingListings(true);
     try {
       const response = await fetch("http://localhost:5001/api/hotels/host/me", {
@@ -91,7 +81,29 @@ const HostDashboard = () => {
       if (data.success) setProperties(data.properties);
     } catch (err) { console.error(err); }
     finally { setLoadingListings(false); }
-  };
+  }, [getToken]);
+
+  useEffect(() => {
+    if (activeTab === "Listings") { fetchListings(); loadDrafts(); }
+    if (activeTab === "Today" || activeTab === "Calendar") fetchHostBookings();
+  }, [activeTab, fetchHostBookings, fetchListings, loadDrafts]);
+
+  // Fix #7: refetch when filter changes
+  useEffect(() => {
+    if (activeTab === "Today") fetchHostBookings();
+  }, [activeTab, todayFilter, fetchHostBookings]);
+
+  useEffect(() => {
+    if (activeTab === "Messages") {
+      navigate("/messages");
+    }
+  }, [activeTab, navigate]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate("/login");
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this listing?")) return;
@@ -114,7 +126,7 @@ const HostDashboard = () => {
 
   const handleResumeDraft = (draft) => { setResumeDraft(draft); setShowListingForm(true); };
 
-  if (!isLoggedIn) { navigate("/login"); return null; }
+  if (!isLoggedIn) return null;
 
   if (showListingForm) {
     return (
@@ -423,8 +435,6 @@ const HostDashboard = () => {
            <div className="w-full flex flex-col items-center mt-20 text-center">
               <Loader2 className="w-8 h-8 animate-spin text-rose-500 mb-4" />
               <p className="text-gray-500">Redirecting to your host inbox...</p>
-              {/* Auto redirect to messages page */}
-              {useEffect(() => { navigate("/messages"); }, [])}
            </div>
         )}
 
@@ -495,7 +505,7 @@ const HostDashboard = () => {
                       setEditingProperty(null);
                       fetchListings();
                    }
-                } catch (err) { alert("Failed to update."); }
+                } catch { alert("Failed to update."); }
               }} 
               className="flex-1 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-semibold rounded-lg transition"
             >

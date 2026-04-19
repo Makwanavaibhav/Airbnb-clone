@@ -5,6 +5,7 @@ const { MongoClient } = require("mongodb");
 const mongoose = require("mongoose");
 const http = require("http");
 const socketIo = require("socket.io");
+const jwt = require("jsonwebtoken");
 
 const authRoutes = require("./routes/authRoutes");
 const hotelRoutes = require("./routes/hotelRoutes");
@@ -17,6 +18,19 @@ const io = socketIo(server, {
   cors: {
     origin: "http://localhost:5173",
     methods: ["GET", "POST"]
+  }
+});
+
+io.use((socket, next) => {
+  const token = socket.handshake?.auth?.token;
+  if (!token) return next(new Error("Authentication required"));
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default_secret");
+    socket.userId = decoded.userId || decoded._id;
+    return next();
+  } catch {
+    return next(new Error("Invalid token"));
   }
 });
 
@@ -62,14 +76,49 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  socket.on('join_conversation', (conversationId) => {
-    socket.join(conversationId);
-    console.log(`User joined conversation: ${conversationId}`);
+  socket.on('join_conversation', async (conversationId) => {
+    try {
+      let authorized = false;
+      const parts = conversationId.split('_');
+      
+      if (parts.length >= 3) {
+        const guestId = parts[1];
+        const hostId = parts[2];
+        if (String(socket.userId) === String(guestId) || String(socket.userId) === String(hostId)) {
+          authorized = true;
+        }
+      } else {
+        // Fallback check: look at messages in this conversation
+        const Message = require('./models/Message');
+        const msg = await Message.findOne({ conversationId });
+        // If no messages exist yet, or the user is the sender/receiver, allow join
+        if (!msg || String(msg.senderId) === String(socket.userId) || String(msg.receiverId) === String(socket.userId)) {
+          authorized = true;
+        }
+      }
+
+      if (!authorized) {
+        console.log(`Unauthorized join attempt by ${socket.userId} for room ${conversationId}`);
+        return;
+      }
+
+      socket.join(conversationId);
+      console.log(`User joined conversation: ${conversationId}`);
+    } catch (err) {
+      console.error("Error joining conversation:", err);
+    }
   });
 
   socket.on('send_message', async (data) => {
     const { conversationId, senderId, receiverId, message } = data;
-    
+    if (!socket.userId || String(socket.userId) !== String(senderId)) {
+      return;
+    }
+
+    if (!message || !String(message).trim()) {
+      return;
+    }
+
     const Message = require('./models/Message');
     const newMessage = await Message.create({
       conversationId,

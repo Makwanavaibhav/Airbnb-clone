@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -11,19 +11,7 @@ const Wishlists = () => {
   const [wishlistHotels, setWishlistHotels] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
-  useEffect(() => {
-    if (!isLoggedIn) { navigate('/login'); return; }
-    fetchWishlistData();
-  }, [isLoggedIn]);
-
-  // Keep hotel data in sync whenever wishlistIds changes (e.g. after un-liking from Home)
-  useEffect(() => {
-    if (wishlistHotels.length > 0) {
-      setWishlistHotels(prev => prev.filter(h => wishlistIds.has(String(h._id || h.id))));
-    }
-  }, [wishlistIds]);
-
-  const fetchWishlistData = async () => {
+  const fetchWishlistData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -39,7 +27,17 @@ const Wishlists = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchWishlistIds]);
+
+  useEffect(() => {
+    if (!isLoggedIn) { navigate('/login'); return; }
+    fetchWishlistData();
+  }, [isLoggedIn, navigate, fetchWishlistData]);
+
+  // Keep hotel data in sync whenever wishlistIds changes (e.g. after un-liking from Home)
+  useEffect(() => {
+    setWishlistHotels(prev => prev.filter(h => wishlistIds.has(String(h._id || h.id))));
+  }, [wishlistIds]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 min-h-screen pb-40">

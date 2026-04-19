@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import MessagesList from './components/MessagesList';
 import EmptyState from './components/EmptyState';
-import { Search, Settings, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import io from 'socket.io-client';
 import axios from 'axios';
 
@@ -12,13 +12,23 @@ let socket;
 const Messages = () => {
   const { user } = useAuth();
   const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
-  const currentUserId = currentUser.id || currentUser._id;
+  let currentUserId = currentUser.id || currentUser._id;
+  if (!currentUserId && localStorage.getItem('token')) {
+    try {
+      currentUserId = JSON.parse(atob(localStorage.getItem('token').split('.')[1])).userId;
+    } catch(e) {}
+  }
   
-  const [filter, setFilter] = useState('all');
   const [messages, setMessages] = useState([]);
   const [userMap, setUserMap] = useState({});
   const [currentConversation, setCurrentConversation] = useState(null);
   const [inputText, setInputText] = useState('');
+  const messagesEndRef = React.useRef(null);
+
+  // Auto-scroll to bottom when messages or conversation changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, currentConversation]);
 
   // Fetch messages from backend
   useEffect(() => {
@@ -44,12 +54,22 @@ const Messages = () => {
   }, [currentUserId]);
 
   useEffect(() => {
-    socket = io('http://localhost:5001');
+    socket = io('http://localhost:5001', {
+      auth: {
+        token: localStorage.getItem('token'),
+      },
+    });
     if (currentConversation) {
       socket.emit('join_conversation', currentConversation);
     }
     socket.on('receive_message', (message) => {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => {
+        // Prevent duplicate appending if optimistic update was already added
+        if (prev.some(m => m.timestamp === message.timestamp && m.message === message.message)) {
+           return prev;
+        }
+        return [...prev, message];
+      });
     });
 
     return () => {
@@ -61,7 +81,7 @@ const Messages = () => {
     setCurrentConversation(convoId);
   };
 
-  const sendMessage = (e) => {
+  const sendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || !currentConversation || !currentUserId) return;
 
@@ -77,14 +97,28 @@ const Messages = () => {
       }
     }
 
-    socket.emit('send_message', {
+    const optimisticMsg = {
       conversationId: currentConversation,
       senderId: currentUserId,
-      receiverId: receiverId,
-      message: inputText
-    });
+      receiverId,
+      message: inputText,
+      timestamp: new Date().toISOString()
+    };
 
+    setMessages(prev => [...prev, optimisticMsg]);
+    const textToSend = inputText;
     setInputText('');
+
+    try {
+      socket.emit('send_message', {
+        conversationId: currentConversation,
+        senderId: currentUserId,
+        receiverId: receiverId,
+        message: textToSend
+      });
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
   };
 
   // Group messages for MessagesList
@@ -165,6 +199,7 @@ const Messages = () => {
                   {msg.message}
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             {/* Input form */}
             <form onSubmit={sendMessage} className="absolute bottom-0 w-full p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">

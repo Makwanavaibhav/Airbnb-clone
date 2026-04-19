@@ -8,7 +8,6 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { useNavigate } from "react-router-dom";
 
 // Fix Leaflet default icon paths broken by Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -60,7 +59,6 @@ export default function ListingCreationWizardWrapper({ onClose, draftData }) {
 }
 
 function ListingCreationWizard({ onClose, draftData }) {
-  const navigate = useNavigate();
   const { getToken } = useAuth();
   
   const STEPS = [
@@ -82,7 +80,7 @@ function ListingCreationWizard({ onClose, draftData }) {
 
   const [currentStep, setCurrentStep] = useState(draftData?.currentStep || 0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const [showSuperhostModal, setShowSuperhostModal] = useState(!draftData);
   
   const [showAddressModal1, setShowAddressModal1] = useState(false);
