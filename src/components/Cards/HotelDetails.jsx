@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiShare, FiHeart, FiStar } from 'react-icons/fi';
+import { FiShare, FiHeart } from 'react-icons/fi';
 import { BsCheckCircle, BsHeartFill } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { ChevronLeft, ChevronRight, Calendar, Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchHotelById } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import ReviewsList from '../ReviewsList';
+import WriteReview from '../WriteReview';
 
 // ─── GuestCounter ─────────────────────────────────────────────────────────────
 function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0, max = 10 }) {
@@ -101,13 +103,6 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick, hoveredDay
   );
 }
 
-// ─── Mock Reviews ──────────────────────────────────────────────────────────────
-const MOCK_REVIEWS = [
-  { id: 1, name: "John Doe", date: "March 2026", rating: 5, text: "Amazing stay! The place was exactly as described and the host was very responsive. The view from the balcony is breathtaking.", avatar: "https://i.pravatar.cc/150?u=1" },
-  { id: 2, name: "Sarah Smith", date: "February 2026", rating: 4, text: "Great location, close to all the main attractions. The apartment was clean and comfortable. A wonderful experience.", avatar: "https://i.pravatar.cc/150?u=2" },
-  { id: 3, name: "Michael Johnson", date: "January 2026", rating: 5, text: "Absolutely loved it! The amenities were top-notch and the bed was super comfy. Would definitely book again.", avatar: "https://i.pravatar.cc/150?u=3" },
-  { id: 4, name: "Emily Davis", date: "December 2025", rating: 5, text: "A true hidden gem. We had such a relaxing time here. The kitchen was well-stocked and we enjoyed making dinners.", avatar: "https://i.pravatar.cc/150?u=4" }
-];
 
 // A robust self-healing image loader to bypass AWS S3 strict casing errors
 function S3Image({ src, alt, className }) {
@@ -162,10 +157,7 @@ const HotelDetails = () => {
   const [error, setError] = useState(null);
   
   // Reviews state
-  const [reviews, setReviews] = useState([]);
-  const [newReviewText, setNewReviewText] = useState("");
-  const [newReviewRating, setNewReviewRating] = useState(5);
-  const [submittingReview, setSubmittingReview] = useState(false);
+  const reviewsRef = useRef(null);
   const [bookedDates, setBookedDates] = useState([]);
   
   const [startDate, setStartDate] = useState(null);
@@ -223,16 +215,6 @@ const HotelDetails = () => {
           setLoading(false);
         }
       });
-
-    // Fetch real reviews
-    fetch(`http://localhost:5001/api/hotels/${id}/reviews`)
-      .then(res => res.json())
-      .then(data => {
-        if (!cancelled && data.success) {
-          setReviews(data.reviews);
-        }
-      })
-      .catch(console.error);
 
     // Fetch booked dates
     fetch(`http://localhost:5001/api/bookings/hotel/${id}/dates`)
@@ -308,38 +290,6 @@ const HotelDetails = () => {
       </div>
     );
   }
-
-  const handleSubmitReview = async () => {
-    if (!newReviewText.trim()) return;
-    setSubmittingReview(true);
-    try {
-      const token = localStorage.getItem("token"); // Assuming auth context pattern
-      const response = await fetch(`http://localhost:5001/api/hotels/${id}/reviews`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
-        },
-        body: JSON.stringify({ rating: newReviewRating, text: newReviewText })
-      });
-      const result = await response.json();
-      if (result.success) {
-        // Refresh reviews
-        const revRes = await fetch(`http://localhost:5001/api/hotels/${id}/reviews`);
-        const revData = await revRes.json();
-        setReviews(revData.reviews);
-        setNewReviewText("");
-        setNewReviewRating(5);
-      } else {
-        alert(result.error || "Failed to post review. Ensure you are logged in.");
-      }
-    } catch(err) {
-      console.error(err);
-      alert("Error posting review. Please log in first.");
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
 
   const handleDayClick = (date) => {
     setBookingError(null);
@@ -615,67 +565,13 @@ const HotelDetails = () => {
             </div>
           </div>
 
-          {/* Reviews Section */}
-          <div className="py-8 border-t">
-            <div className="flex items-center gap-2 mb-8">
-              <FiStar className="fill-current w-6 h-6" />
-              <h2 className="text-[22px] font-semibold">{data.rating || "New"} · {reviews.length} reviews</h2>
-            </div>
-            
-            {reviews.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-                {reviews.map(review => (
-                  <div key={review._id}>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex justify-center items-center font-bold text-gray-500">
-                        {review.userId?.firstName?.charAt(0) || "U"}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-[16px]">{review.userId?.firstName || "Guest"}</div>
-                        <div className="text-[14px] text-gray-500">{new Date(review.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
-                      </div>
-                    </div>
-                    <p className="text-[16px] text-gray-800 dark:text-gray-200 font-light leading-relaxed">
-                      {review.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-                <div className="text-gray-500 mb-8 italic">No reviews yet. Be the first to review this property!</div>
-            )}
-            
-            <button className="mt-8 px-6 py-3 border border-gray-900 dark:border-gray-100 rounded-lg text-[16px] font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-              Show all reviews
-            </button>
-
-            {/* Write a review */}
-            <div className="mt-12 bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700">
-               <h3 className="text-[18px] font-semibold mb-4">Leave a review</h3>
-               <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm text-gray-600">Your Rating: </span>
-                  {[1,2,3,4,5].map(v => (
-                    <button key={v} onClick={() => setNewReviewRating(v)} className="text-lg">
-                      <FiStar className={newReviewRating >= v ? "fill-[#FF385C] text-[#FF385C]" : "text-gray-400"} />
-                    </button>
-                  ))}
-               </div>
-               <textarea 
-                  className="w-full outline-none border border-gray-300 dark:border-gray-600 p-4 rounded-xl resize-none focus:border-black dark:bg-gray-900"
-                  rows={4}
-                  placeholder="Share your experience..."
-                  value={newReviewText}
-                  onChange={e => setNewReviewText(e.target.value)}
-               />
-               <button 
-                  onClick={handleSubmitReview}
-                  disabled={submittingReview}
-                  className="mt-4 px-6 py-2.5 bg-[#222222] hover:bg-black text-white font-medium rounded-lg transition-colors shadow-sm disabled:bg-gray-400"
-               >
-                 {submittingReview ? "Submitting..." : "Submit Review"}
-               </button>
-            </div>
-          </div>
+          {/* Reviews Section – real reviews via shared components */}
+          <ReviewsList ref={reviewsRef} targetId={id} targetType="hotel" />
+          <WriteReview
+            targetId={id}
+            targetType="hotel"
+            onReviewPosted={() => reviewsRef.current?.refetch()}
+          />
         </div>
 
         {/* Right Column - Sticky Reservation Card (Desktop) */}

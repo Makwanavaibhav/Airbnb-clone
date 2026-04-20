@@ -11,6 +11,8 @@ const authRoutes = require("./routes/authRoutes");
 const hotelRoutes = require("./routes/hotelRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const userRoutes = require("./routes/userRoutes");
+const experienceRoutes = require("./routes/experienceRoutes");
+const serviceRoutes = require("./routes/serviceRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -68,6 +70,9 @@ app.use("/api/hotels", hotelRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", require("./routes/messageRoutes"));
+app.use("/api/experiences", experienceRoutes);
+app.use("/api/services", serviceRoutes);
+app.use("/api/reviews", require("./routes/reviewRoutes"));
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));

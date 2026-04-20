@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
+const ExperienceBooking = require('../models/ExperienceBooking');
+const ServiceBooking = require('../models/ServiceBooking');
 const { protect } = require('../middleware/authMiddleware');
 
 // Get booked dates for a hotel
@@ -37,39 +39,116 @@ router.get('/host-reservations', protect, async (req, res) => {
   }
 });
 
-// Get user's trips
+// Get user's trips (merged: hotels + experiences + services)
 router.get('/my-trips', protect, async (req, res) => {
   try {
-    const { status } = req.query;
-    
-    let query = { userId: req.user._id };
-    
-    if (status && status !== 'undefined' && status !== 'null') {
-      if (status === 'cancelled') {
-        query.status = 'cancelled';
-      } else if (status === 'upcoming') {
-        query.status = { $ne: 'cancelled' };
-        query.checkInDate = { $gte: new Date() };
-      } else if (status === 'past') {
-        query.checkOutDate = { $lt: new Date() };
-        query.status = { $ne: 'cancelled' };
-      }
-    }
+    const userId = req.user._id;
 
-    const trips = await Booking.find(query)
+    // Hotel bookings
+    const hotelBookings = await Booking.find({ userId })
       .populate('hotelId', 'title image images location price priceRaw pricePerNight rating hostId')
-      .sort({ checkInDate: -1 });
+      .sort({ checkInDate: -1 })
+      .lean();
+    const normalizedHotels = hotelBookings.map(b => ({
+      ...b,
+      bookingType: 'hotel',
+      title: b.hotelId?.title,
+      city: b.hotelId?.location,
+      images: b.hotelId?.images || (b.hotelId?.image ? [b.hotelId.image] : []),
+      totalPrice: b.totalAmount,
+      startDate: b.checkInDate,
+      endDate: b.checkOutDate,
+    }));
 
-    res.json({ 
-      success: true, 
-      trips 
-    });
+    // Experience bookings
+    const expBookings = await ExperienceBooking.find({ userId })
+      .populate('experienceId', 'title images city pricePerPerson')
+      .sort({ checkIn: -1 })
+      .lean();
+    const normalizedExp = expBookings.map(b => ({
+      ...b,
+      bookingType: 'experience',
+      title: b.experienceId?.title,
+      city: b.experienceId?.city,
+      images: b.experienceId?.images || [],
+      totalPrice: b.totalPrice,
+      startDate: b.checkIn,
+      endDate: b.checkOut,
+    }));
+
+    // Service bookings
+    const svcBookings = await ServiceBooking.find({ userId })
+      .populate('serviceId', 'title images city pricePerSession')
+      .sort({ sessionDate: -1 })
+      .lean();
+    const normalizedSvc = svcBookings.map(b => ({
+      ...b,
+      bookingType: 'service',
+      title: b.serviceId?.title,
+      city: b.serviceId?.city,
+      images: b.serviceId?.images || [],
+      totalPrice: b.totalPrice,
+      startDate: b.sessionDate,
+      endDate: b.sessionDate,
+    }));
+
+    // Merge & sort by creation date descending
+    const allTrips = [...normalizedHotels, ...normalizedExp, ...normalizedSvc]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({ success: true, trips: allTrips });
   } catch (error) {
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching trips',
       error: error.message 
     });
+  }
+});
+
+// POST /api/bookings/experience – Create experience booking
+router.post('/experience', protect, async (req, res) => {
+  try {
+    const { experienceId, hostId, checkIn, checkOut, guests, totalPrice } = req.body;
+    if (!experienceId || !checkIn || !guests || !totalPrice) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    const booking = await ExperienceBooking.create({
+      userId: req.user._id,
+      experienceId,
+      hostId,
+      checkIn: new Date(checkIn),
+      checkOut: checkOut ? new Date(checkOut) : undefined,
+      guests,
+      totalPrice,
+      status: 'confirmed',
+      bookingType: 'experience',
+    });
+    res.status(201).json({ success: true, booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error creating experience booking', error: error.message });
+  }
+});
+
+// POST /api/bookings/service – Create service booking
+router.post('/service', protect, async (req, res) => {
+  try {
+    const { serviceId, hostId, sessionDate, totalPrice } = req.body;
+    if (!serviceId || !sessionDate || !totalPrice) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    const booking = await ServiceBooking.create({
+      userId: req.user._id,
+      serviceId,
+      hostId,
+      sessionDate: new Date(sessionDate),
+      totalPrice,
+      status: 'confirmed',
+      bookingType: 'service',
+    });
+    res.status(201).json({ success: true, booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error creating service booking', error: error.message });
   }
 });
 
