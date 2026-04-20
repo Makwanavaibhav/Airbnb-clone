@@ -151,7 +151,7 @@ function DetailSkeleton() {
 const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isLoggedIn, wishlistIds, toggleWishlist } = useAuth();
+  const { isLoggedIn, wishlistIds, toggleWishlist, user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -317,14 +317,24 @@ const HotelDetails = () => {
   const serviceFee = Math.round(totalPrice * 0.14);
   const total = totalPrice + serviceFee;
 
+  // Is the logged-in user the owner of this listing?
+  const isOwner = isLoggedIn && user && data &&
+    (String(user._id || user.id) === String(data.hostId));
+
   const handleReserve = () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
     if (!startDate || !endDate) {
       setBookingError("Please select check-in and checkout dates.");
       return;
     }
     setBookingError(null);
     
-    navigate(`/checkout/${data.id}`, {
+    // Always use MongoDB ObjectId (_id) — data.id is a virtual alias that
+    // may be absent on freshly-created listings before a page reload.
+    navigate(`/checkout/${data._id || data.id}`, {
       state: {
         hotel: data,
         checkIn: startDate,
@@ -332,6 +342,16 @@ const HotelDetails = () => {
         guests: guests
       }
     });
+  };
+
+  // Open (or resume) a real-time message thread with the host
+  const handleMessageHost = () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    // Navigate to the messages page; pass hostId so the page can init the thread
+    navigate(`/messages?hostId=${data.hostId}`);
   };
 
   return (
@@ -412,21 +432,33 @@ const HotelDetails = () => {
           <div className="flex justify-between items-center pb-6 border-b">
             <div>
               <h2 className="text-[22px] font-semibold mb-1">Entire home hosted by {data.host?.name || data.hostName || "Independent Host"}</h2>
-              <div className="text-[15px] text-gray-700 dark:text-gray-300 flex flex-wrap gap-1 mb-2">
+              <div className="text-[15px] text-gray-700 dark:text-gray-300 flex flex-wrap gap-1 mb-3">
                 <span>{data.guests} guests</span> ·
                 <span>{data.bedrooms} bedrooms</span> ·
                 <span>{data.beds} beds</span> ·
                 <span>{data.baths} baths</span>
               </div>
-              <button 
-                onClick={() => {
-                  if (!isLoggedIn) { navigate('/login'); return; }
-                  navigate(`/messages?hostId=${data.hostId}`);
-                }}
-                className="px-4 py-2 border border-black dark:border-white rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 transition"
-              >
-                Contact Host
-              </button>
+              {/* Message Host — only for non-owners */}
+              {!isOwner && (
+                <button 
+                  id="message-host-btn"
+                  onClick={handleMessageHost}
+                  className="px-4 py-2 border border-black dark:border-white rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                  Message Host
+                </button>
+              )}
+              {/* Owner management shortcut */}
+              {isOwner && (
+                <button
+                  onClick={() => navigate('/host-dashboard')}
+                  className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg text-sm font-semibold hover:opacity-90 flex items-center gap-2 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  Manage listing
+                </button>
+              )}
             </div>
             <img src={data.host?.image || "https://i.pravatar.cc/150?u=host"} alt={data.host?.name || "Host"} className="w-14 h-14 rounded-full object-cover" />
           </div>
@@ -576,119 +608,149 @@ const HotelDetails = () => {
 
         {/* Right Column - Sticky Reservation Card (Desktop) */}
         <div className="hidden md:block w-[330px]">
-          <div className="sticky top-28 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-[0_6px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.4)] p-6 z-10">
-            <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-[22px] font-semibold">₹{data.priceRaw?.toLocaleString('en-IN')}</span>
-              <span className="text-[15px] font-light text-gray-600 dark:text-gray-400">night</span>
+          {isOwner ? (
+            /* Host management panel */
+            <div className="sticky top-28 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-[0_6px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.4)] p-6 z-10">
+              <div className="text-center mb-4">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                  Published
+                </span>
+              </div>
+              <h3 className="text-[18px] font-semibold text-center mb-2">This is your listing</h3>
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 text-center mb-6">Guests cannot book their own host's listing.</p>
+              <button
+                onClick={() => navigate('/host-dashboard')}
+                className="w-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold py-3 rounded-lg hover:opacity-90 transition text-[15px] mb-3"
+              >
+                Go to Host Dashboard
+              </button>
+              <button
+                onClick={() => navigate(`/host-dashboard`)}
+                className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition text-[15px]"
+              >
+                Edit listing
+              </button>
             </div>
+          ) : (
+            /* Guest reservation card */
+            <div className="sticky top-28 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-[0_6px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.4)] p-6 z-10">
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="text-[22px] font-semibold">₹{data.priceRaw?.toLocaleString('en-IN')}</span>
+                <span className="text-[15px] font-light text-gray-600 dark:text-gray-400">night</span>
+              </div>
 
-            {/* Date Picker Input */}
-            <div className="border border-gray-400 dark:border-gray-600 rounded-lg mb-4 bg-white dark:bg-gray-900 relative">
-              <div className="flex border-b border-gray-400 dark:border-gray-600">
-                <div onClick={scrollToCalendar} className="w-1/2 p-3 border-r border-gray-400 dark:border-gray-600 rounded-tl-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                  <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Check-in</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    {startDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)}` : "Add date"}
+              {/* Date Picker Input */}
+              <div className="border border-gray-400 dark:border-gray-600 rounded-lg mb-4 bg-white dark:bg-gray-900 relative">
+                <div className="flex border-b border-gray-400 dark:border-gray-600">
+                  <div onClick={scrollToCalendar} className="w-1/2 p-3 border-r border-gray-400 dark:border-gray-600 rounded-tl-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                    <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Check-in</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      {startDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)}` : "Add date"}
+                    </div>
+                  </div>
+                  <div onClick={scrollToCalendar} className="w-1/2 p-3 rounded-tr-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                    <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Checkout</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      {endDate ? `${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add date"}
+                    </div>
                   </div>
                 </div>
-                <div onClick={scrollToCalendar} className="w-1/2 p-3 rounded-tr-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                  <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Checkout</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    {endDate ? `${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add date"}
+                <div className="relative" ref={guestDropdownRef}>
+                  <div 
+                    onClick={() => setShowGuestDropdown(!showGuestDropdown)}
+                    className="p-3 w-full rounded-b-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition flex justify-between items-center"
+                  >
+                    <div className="overflow-hidden">
+                      <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Guests</div>
+                      <div className="text-sm text-gray-700 dark:text-gray-300 truncate pr-2">
+                        {totalGuests} guest{totalGuests !== 1 && 's'} 
+                        {guests.infants > 0 && `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}`}
+                        {guests.pets > 0 && `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}`}
+                      </div>
+                    </div>
+                    {showGuestDropdown ? <ChevronUp className="w-5 h-5 text-gray-500 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-500 shrink-0" />}
                   </div>
+
+                  {showGuestDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl p-4 z-50">
+                      <GuestCounter label="Adults" sublabel="Age 13+" value={guests.adults} onInc={() => incGuest('adults')} onDec={() => decGuest('adults')} min={1} max={10} />
+                      <GuestCounter label="Children" sublabel="Ages 2-12" value={guests.children} onInc={() => incGuest('children')} onDec={() => decGuest('children')} max={5} />
+                      <GuestCounter label="Infants" sublabel="Under 2" value={guests.infants} onInc={() => incGuest('infants')} onDec={() => decGuest('infants')} max={5} />
+                      <GuestCounter label="Pets" sublabel="Bringing a service animal?" value={guests.pets} onInc={() => incGuest('pets')} onDec={() => decGuest('pets')} max={5} />
+                      <div className="mt-4 text-xs font-light text-gray-500 text-center">
+                        This property allows a maximum of {data.guests} guests, not including infants.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="relative" ref={guestDropdownRef}>
-                <div 
-                  onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                  className="p-3 w-full rounded-b-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition flex justify-between items-center"
-                >
-                  <div className="overflow-hidden">
-                    <div className="text-[10px] uppercase font-bold text-gray-800 dark:text-gray-200 mb-1">Guests</div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300 truncate pr-2">
-                      {totalGuests} guest{totalGuests !== 1 && 's'} 
-                      {guests.infants > 0 && `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}`}
-                      {guests.pets > 0 && `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}`}
-                    </div>
-                  </div>
-                  {showGuestDropdown ? <ChevronUp className="w-5 h-5 text-gray-500 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-500 shrink-0" />}
-                </div>
 
-                {showGuestDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl p-4 z-50">
-                    <GuestCounter label="Adults" sublabel="Age 13+" value={guests.adults} onInc={() => incGuest('adults')} onDec={() => decGuest('adults')} min={1} max={10} />
-                    <GuestCounter label="Children" sublabel="Ages 2-12" value={guests.children} onInc={() => incGuest('children')} onDec={() => decGuest('children')} max={5} />
-                    <GuestCounter label="Infants" sublabel="Under 2" value={guests.infants} onInc={() => incGuest('infants')} onDec={() => decGuest('infants')} max={5} />
-                    <GuestCounter label="Pets" sublabel="Bringing a service animal?" value={guests.pets} onInc={() => incGuest('pets')} onDec={() => decGuest('pets')} max={5} />
-                    <div className="mt-4 text-xs font-light text-gray-500 text-center">
-                      This property allows a maximum of {data.guests} guests, not including infants.
-                    </div>
-                  </div>
+              <button 
+                id="reserve-btn"
+                onClick={handleReserve}
+                disabled={isReserving}
+                className={`w-full ${isReserving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF385C] hover:bg-[#d90b63]'} text-white font-semibold py-3.5 rounded-lg transition text-[16px] mb-4 flex justify-center items-center gap-2`}
+              >
+                {isReserving && (
+                  <div className="w-5 h-5 border-2 border-t-white border-transparent rounded-full animate-spin"></div>
                 )}
-              </div>
-            </div>
-
-            <button 
-              onClick={handleReserve}
-              disabled={isReserving}
-              className={`w-full ${isReserving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF385C] hover:bg-[#d90b63]'} text-white font-semibold py-3.5 rounded-lg transition text-[16px] mb-4 flex justify-center items-center gap-2`}
-            >
-              {isReserving && (
-                <div className="w-5 h-5 border-2 border-t-white border-transparent rounded-full animate-spin"></div>
+                {isReserving ? 'Reserving...' : 'Reserve'}
+              </button>
+              {bookingError && (
+                <div className="text-center text-sm text-red-500 mb-4 font-medium px-2 bg-red-50 py-2 rounded-lg border border-red-100">
+                  {bookingError}
+                </div>
               )}
-              {isReserving ? 'Reserving...' : 'Reserve'}
-            </button>
-            {bookingError && (
-              <div className="text-center text-sm text-red-500 mb-4 font-medium px-2 bg-red-50 py-2 rounded-lg border border-red-100">
-                {bookingError}
-              </div>
-            )}
-            {!bookingError && (
-              <div className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6 font-light">
-                You won't be charged yet
-              </div>
-            )}
+              {!bookingError && (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6 font-light">
+                  You won't be charged yet
+                </div>
+              )}
 
-            {/* Pricing Breakdown */}
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between text-[16px] text-gray-700 dark:text-gray-300 font-light">
-                <span className="underline">₹{data.priceRaw?.toLocaleString('en-IN')} x {days} nights</span>
-                <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+              {/* Pricing Breakdown */}
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between text-[16px] text-gray-700 dark:text-gray-300 font-light">
+                  <span className="underline">₹{data.priceRaw?.toLocaleString('en-IN')} x {days} nights</span>
+                  <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-[16px] text-gray-700 dark:text-gray-300 font-light">
+                  <span className="underline">Airbnb service fee</span>
+                  <span>₹{serviceFee.toLocaleString('en-IN')}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-[16px] text-gray-700 dark:text-gray-300 font-light">
-                <span className="underline">Airbnb service fee</span>
-                <span>₹{serviceFee.toLocaleString('en-IN')}</span>
+
+              <div className="border-t pt-4 flex justify-between font-semibold text-[16px]">
+                <span>Total before taxes</span>
+                <span>₹{total.toLocaleString('en-IN')}</span>
               </div>
             </div>
-
-            <div className="border-t pt-4 flex justify-between font-semibold text-[16px]">
-              <span>Total before taxes</span>
-              <span>₹{total.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
+          )}
         </div>
 
       </div>
 
-      {/* Mobile Sticky Booking Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center z-40 transition-transform shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-        <div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-lg font-semibold">₹{data.priceRaw?.toLocaleString('en-IN')}</span>
-            <span className="text-[13px] font-light text-gray-600 dark:text-gray-400">night</span>
+      {/* Mobile Sticky Booking Bar — hidden for owners */}
+      {!isOwner && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center z-40 transition-transform shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-semibold">₹{data.priceRaw?.toLocaleString('en-IN')}</span>
+              <span className="text-[13px] font-light text-gray-600 dark:text-gray-400">night</span>
+            </div>
+            <div className="text-[13px] text-gray-500 underline font-medium">
+              {startDate && endDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)} - ${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add dates"}
+            </div>
           </div>
-          <div className="text-[13px] text-gray-500 underline font-medium">
-            {startDate && endDate ? `${startDate.getDate()} ${MONTH_NAMES[startDate.getMonth()].slice(0,3)} - ${endDate.getDate()} ${MONTH_NAMES[endDate.getMonth()].slice(0,3)}` : "Add dates"}
-          </div>
+          <button 
+            onClick={handleReserve}
+            disabled={isReserving}
+            className={`px-8 py-3 rounded-lg text-white font-semibold flex items-center justify-center min-h-[44px] ${isReserving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF385C] active:scale-95'}`}
+          >
+            {isReserving ? 'Reserving...' : 'Reserve'}
+          </button>
         </div>
-        <button 
-          onClick={handleReserve}
-          disabled={isReserving}
-          className={`px-8 py-3 rounded-lg text-white font-semibold flex items-center justify-center min-h-[44px] ${isReserving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF385C] active:scale-95'}`}
-        >
-          {isReserving ? 'Reserving...' : 'Reserve'}
-        </button>
-      </div>
+      )}
     </div>
   );
 };

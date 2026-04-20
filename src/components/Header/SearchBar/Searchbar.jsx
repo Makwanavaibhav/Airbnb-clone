@@ -5,17 +5,7 @@ import {
 } from "lucide-react";
 import { useSearch } from "../../../context/SearchContext.jsx";
 
-// ─── Destination data ─────────────────────────────────────────────────────────
-const DESTINATIONS = [
-  { id: "nearby",   label: "Nearby",                subtitle: "Find what's around you",                    Icon: Navigation, bg: "bg-blue-50",   color: "text-blue-500"   },
-  { id: "mumbai",   label: "Mumbai, Maharashtra",   subtitle: "For sights like Gateway of India",           Icon: Building2,  bg: "bg-orange-50", color: "text-orange-500" },
-  { id: "goa",      label: "North Goa, Goa",        subtitle: "Popular beach destination",                  Icon: Palmtree,   bg: "bg-green-50",  color: "text-green-500"  },
-  { id: "udaipur",  label: "Udaipur, Rajasthan",    subtitle: "Because your wishlist has stays in Udaipur", Icon: Landmark,   bg: "bg-indigo-50", color: "text-indigo-500" },
-  { id: "jaipur",   label: "Jaipur, Rajasthan",     subtitle: "For its stunning architecture",              Icon: Landmark,   bg: "bg-pink-50",   color: "text-pink-500"   },
-  { id: "delhi",    label: "New Delhi, Delhi",       subtitle: "For sights like India Gate",                 Icon: Building2,  bg: "bg-violet-50", color: "text-violet-500" },
-  { id: "lonavala", label: "Lonavala, Maharashtra", subtitle: "Misty hills & scenic valleys",               Icon: Trees,      bg: "bg-emerald-50",color: "text-emerald-500"},
-  { id: "varanasi", label: "Varanasi, Uttar Pradesh", subtitle: "A hidden gem",                             Icon: Compass,    bg: "bg-amber-50",  color: "text-amber-500"  },
-];
+// Removed hardcoded DESTINATIONS
 
 // ─── Services data ────────────────────────────────────────────────────────────
 const SERVICES = [
@@ -30,6 +20,19 @@ const SERVICES = [
   { id: "catering",       label: "Catering",       icon: "🍱" },
   { id: "nails",          label: "Nails",          icon: "💅" },
 ];
+
+function HighlightMatch({ text, query }) {
+  if (!query || !text) return <span>{text}</span>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <span>{text}</span>;
+  return (
+    <span>
+      {text.slice(0, idx)}
+      <strong className="text-gray-900 font-bold">{text.slice(idx, idx + query.length)}</strong>
+      {text.slice(idx + query.length)}
+    </span>
+  );
+}
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -146,6 +149,59 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
     }));
   };
 
+  const [allDestinations, setAllDestinations] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState(destination);
+
+  // Debounce logic
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(destination), 300);
+    return () => clearTimeout(timer);
+  }, [destination]);
+
+  // Fetch all destinations on mount
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/search/destinations');
+        const data = await res.json();
+        if (data.destinations) {
+          setAllDestinations(data.destinations);
+          setSuggestions(data.destinations);
+        }
+      } catch (err) {
+        console.error('Failed to load destinations:', err);
+      }
+    };
+    fetchDestinations();
+  }, []);
+
+  // Fetch suggestions
+  useEffect(() => {
+    if (!debouncedQuery || debouncedQuery.trim() === '') {
+      setSuggestions(allDestinations);
+      return;
+    }
+    const fetchSuggestions = async () => {
+      setLoadingSuggestions(true);
+      try {
+        const res = await fetch(`http://localhost:5001/api/search/destinations?q=${encodeURIComponent(debouncedQuery.trim())}`);
+        const data = await res.json();
+        setSuggestions(data.destinations || []);
+      } catch (err) {
+        // Fallback filter
+        const fallback = allDestinations.filter(d => 
+          (d.city || "").toLowerCase().includes(debouncedQuery.toLowerCase())
+        );
+        setSuggestions(fallback);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+    fetchSuggestions();
+  }, [debouncedQuery, allDestinations]);
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const today         = new Date();
   const leftMonth     = (today.getMonth() + calMonthOffset) % 12;
@@ -202,9 +258,6 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
   const div2 = !(activeSection === "when"  || activeSection === "who");
 
   const isActive      = activeSection !== null;
-  const filteredDests = destination
-    ? DESTINATIONS.filter((d) => d.label.toLowerCase().includes(destination.toLowerCase()))
-    : DESTINATIONS;
 
   // ════════════════════════════════════════════════════════════════════════════
   // COMPACT VARIANT
@@ -300,29 +353,38 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
                     </button>
                   )}
                 </div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">Suggested destinations</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
+                  {!destination ? "Popular Destinations" : "Suggestions"}
+                </p>
                 <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                  {filteredDests.length === 0
-                    ? <p className="text-sm text-gray-400 text-center py-6">No destinations found</p>
-                    : filteredDests.map((dest) => {
-                        const Icon = dest.Icon;
-                        return (
-                          <button
-                            key={dest.id}
-                            onClick={() => { setDestination(dest.label); setActiveSection("when"); }}
-                            className="flex items-center gap-4 w-full px-2 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-left"
-                          >
-                            <div className={`w-[52px] h-[52px] rounded-2xl ${dest.bg} flex items-center justify-center shrink-0`}>
-                              <Icon className={`h-6 w-6 ${dest.color}`} strokeWidth={1.75} />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-[15px] font-semibold text-gray-900 leading-tight">{dest.label}</div>
-                              <div className="text-[13px] text-gray-500 mt-0.5">{dest.subtitle}</div>
-                            </div>
-                          </button>
-                        );
-                    })
-                  }
+                  {loadingSuggestions ? (
+                    <div className="p-4 text-center text-gray-400 text-sm">Searching destinations...</div>
+                  ) : suggestions.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <p className="text-gray-500 text-sm">No destinations found for "{destination}"</p>
+                      <p className="text-gray-400 text-xs mt-1">Try a different city name</p>
+                    </div>
+                  ) : (
+                    suggestions.map((item, index) => (
+                      <button
+                        key={index}
+                        onClick={() => { setDestination(item.city); setActiveSection("when"); }}
+                        className="flex items-center gap-4 w-full px-2 py-3 hover:bg-gray-100 rounded-2xl transition-colors text-left"
+                      >
+                        <div className="w-[52px] h-[52px] rounded-2xl bg-gray-100 flex items-center justify-center shrink-0">
+                          <MapPin className="h-6 w-6 text-gray-500" strokeWidth={1.75} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[15px] font-medium text-gray-800 leading-tight">
+                            <HighlightMatch text={item.city} query={destination} />
+                          </div>
+                          <div className="text-[13px] text-gray-400 mt-0.5">
+                            {item.count} {item.count === 1 ? 'listing' : 'listings'} available
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

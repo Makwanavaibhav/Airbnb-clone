@@ -5,6 +5,7 @@ import axios from 'axios';
 import ServiceAreaMap from '../../components/ServiceAreaMap';
 import ReviewsList from '../../components/ReviewsList';
 import WriteReview from '../../components/WriteReview';
+import StripeCheckout from '../../components/StripeCheckout';
 
 const ServiceDetail = () => {
   const { id } = useParams();
@@ -14,9 +15,39 @@ const ServiceDetail = () => {
   const reviewsRef = useRef(null);
 
   // Booking state
-  const [sessionDate, setSessionDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
   const [booking, setBooking] = useState(false);
+  const [dateError, setDateError] = useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [priceSummary, setPriceSummary] = useState(null);
   const [toast, setToast] = useState(null);
+  const [availableDates, setAvailableDates] = useState([]);
+
+  useEffect(() => {
+    if (service) {
+      const dates = [];
+      const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+      let d = new Date();
+      // start checking from today
+      while (dates.length < 5) {
+        const dayNum = d.getDay();
+        const dayStrOptions = Object.keys(daysMap).filter(k => daysMap[k] === dayNum);
+        // service.availability is something like ['Mon', 'Tue']
+        const hasAvail = !service.availability || service.availability.length === 0 || 
+                         service.availability.some(a => dayStrOptions.includes(a.substring(0,3)));
+        if (hasAvail) {
+          dates.push({
+            date: d.toISOString(),
+            timeRange: '10:00 AM - 1:00 PM',
+            spotsAvailable: 5
+          });
+        }
+        d.setDate(d.getDate() + 1);
+        if (dates.length >= 5 || d > new Date(Date.now() + 86400000 * 30)) break; // reasonable limit
+      }
+      setAvailableDates(dates);
+    }
+  }, [service]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -28,29 +59,67 @@ const ServiceDetail = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const validateSessionDate = (sessionDateInput) => {
+    if (!sessionDateInput) return "Please select a date and time slot";
+    return null;
+  };
+
   const handleBook = async () => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
-    if (!sessionDate) {
-      setToast({ type: 'error', msg: 'Please select a session date' });
-      setTimeout(() => setToast(null), 3000);
+
+    const errorMsg = validateSessionDate(selectedDate);
+    if (errorMsg) {
+      setDateError(errorMsg);
       return;
     }
+    setDateError(null);
+
     try {
       setBooking(true);
-      await axios.post('http://localhost:5001/api/bookings/service', {
-        serviceId: service._id,
-        hostId: service.hostId,
-        sessionDate,
-        totalPrice: service.pricePerSession,
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setToast({ type: 'success', msg: 'Service booked! 🎉' });
-      setTimeout(() => navigate('/trips'), 1500);
+      const res = await fetch('http://localhost:5001/api/payments/service/create-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ serviceId: id, sessionDate: selectedDate?.date })
+      });
+      const data = await res.json();
+      
+      if (!res.ok || !data.success) {
+        setDateError(data.message || 'Payment initiation failed');
+        return;
+      }
+      
+      setClientSecret(data.clientSecret);
+      setPriceSummary({ total: data.total, basePrice: data.basePrice, serviceFee: data.serviceFee });
     } catch (err) {
-      setToast({ type: 'error', msg: err.response?.data?.message || 'Failed to book service' });
-      setTimeout(() => setToast(null), 4000);
+      setDateError('Failed to connect to payment server. Please try again.');
     } finally {
       setBooking(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentIntentId) => {
+    try {
+      const res = await fetch('http://localhost:5001/api/payments/confirm-booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ paymentIntentId, bookingType: 'service' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToast({ type: 'success', msg: 'Service booked! 🎉' });
+        setTimeout(() => navigate('/trips'), 1500);
+      } else {
+        setDateError(data.message || "Failed to confirm booking.");
+      }
+    } catch (err) {
+      setDateError("Network error while confirming booking.");
     }
   };
 
@@ -191,36 +260,99 @@ const ServiceDetail = () => {
               </h3>
             </div>
 
-            {/* Date picker */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                Select session date
-              </label>
-              <input
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
-                value={sessionDate}
-                onChange={e => setSessionDate(e.target.value)}
-                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400"
-              />
-            </div>
-
-            {/* Price */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
-              <div className="flex justify-between font-bold dark:text-white">
-                <span>Total</span>
-                <span>₹{service.pricePerSession?.toLocaleString('en-IN')}</span>
+            {/* Available dates card list */}
+            {availableDates.length > 0 ? (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Available dates</p>
+                <div className="max-h-[300px] overflow-y-auto flex flex-col gap-3 pr-2 custom-scrollbar">
+                  {availableDates.map((slot, idx) => {
+                    const d = new Date(slot.date);
+                    const isToday = d.setHours(0,0,0,0) === new Date().setHours(0,0,0,0);
+                    const isTomorrow = d.setHours(0,0,0,0) === new Date(Date.now() + 86400000).setHours(0,0,0,0);
+                    const labelPrefix = isToday ? "Today, " : isTomorrow ? "Tomorrow, " : d.toLocaleDateString('en-GB', { weekday: 'long' }) + ", ";
+                    const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+                    
+                    const isSelected = selectedDate === slot;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedDate(slot)}
+                        className={`w-full border rounded-[16px] p-4 text-left transition ${
+                          isSelected
+                            ? 'border-purple-600 dark:border-purple-400 border-2 bg-purple-50 dark:bg-purple-900/20'
+                            : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-400'
+                        }`}
+                        disabled={clientSecret != null}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold text-[15px] dark:text-white">{labelPrefix}{dateStr}</div>
+                            <div className="text-sm text-gray-500 mt-1">{slot.timeRange}</div>
+                          </div>
+                          <div className="font-semibold text-sm dark:text-white">
+                            {slot.spotsAvailable} spots available
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Select date</p>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={selectedDate ? new Date(selectedDate.date).toISOString().split('T')[0] : ''}
+                  onChange={e => setSelectedDate({ date: e.target.value, timeRange: '10:00 AM - 1:00 PM', spotsAvailable: 10 })}
+                  className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
+                  disabled={clientSecret != null}
+                />
+              </div>
+            )}
+            
+            {dateError && <p className="text-red-500 font-semibold text-sm mb-4">{dateError}</p>}
 
-            <button
-              onClick={handleBook}
-              disabled={booking}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition"
-            >
-              {booking ? 'Booking...' : 'Book Now'}
-            </button>
-            <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
+            {/* Checkout State Switch */}
+            {clientSecret && priceSummary ? (
+              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-lg font-bold mb-3 dark:text-white">Payment</h4>
+                <div className="mb-4 text-sm dark:text-gray-300 space-y-2">
+                  <div className="flex justify-between">
+                    <span>Base Price</span>
+                    <span>₹{priceSummary.basePrice.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Service Fee</span>
+                    <span>₹{priceSummary.serviceFee.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <StripeCheckout 
+                  clientSecret={clientSecret} 
+                  total={priceSummary.total} 
+                  onSuccess={handlePaymentSuccess} 
+                  onError={(err) => setDateError(`Card Error: ${err}`)}
+                />
+                <button
+                  onClick={() => {setClientSecret(null); setPriceSummary(null); setDateError(null);}}
+                  className="w-full mt-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 rounded-xl transition"
+                >
+                  Edit details
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleBook}
+                  disabled={booking}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition mt-2"
+                >
+                  {booking ? 'Processing...' : 'Book Now'}
+                </button>
+                <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
+              </>
+            )}
           </div>
         </div>
       </div>

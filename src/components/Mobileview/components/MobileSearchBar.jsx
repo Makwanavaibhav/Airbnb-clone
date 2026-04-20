@@ -1,14 +1,63 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, X, MapPin } from "lucide-react";
 import { useSearch } from "../../../context/SearchContext.jsx";
-
-// Simplified destinations for mobile mock
-const MOCK_DESTINATIONS = ["Nearby", "Mumbai", "Goa", "Udaipur", "Jaipur", "Delhi", "Lonavala"];
 
 function MobileSearchBar() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [step, setStep] = useState(1); // 1: Where, 2: When, 3: Who
   const { appliedSearch, setAppliedSearch, searchState, setSearchState } = useSearch();
+
+  const [allDestinations, setAllDestinations] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState(searchState.destination || "");
+
+  // Debounce logic
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchState.destination || ""), 300);
+    return () => clearTimeout(timer);
+  }, [searchState.destination]);
+
+  // Fetch all destinations on mount
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/search/destinations');
+        const data = await res.json();
+        if (data.destinations) {
+          setAllDestinations(data.destinations);
+          setSuggestions(data.destinations);
+        }
+      } catch (err) {
+        console.error('Failed to load destinations:', err);
+      }
+    };
+    fetchDestinations();
+  }, []);
+
+  // Fetch suggestions
+  useEffect(() => {
+    if (!debouncedQuery || debouncedQuery.trim() === '') {
+      setSuggestions(allDestinations);
+      return;
+    }
+    const fetchSuggestions = async () => {
+      setLoadingSuggestions(true);
+      try {
+        const res = await fetch(`http://localhost:5001/api/search/destinations?q=${encodeURIComponent(debouncedQuery.trim())}`);
+        const data = await res.json();
+        setSuggestions(data.destinations || []);
+      } catch (err) {
+        const fallback = allDestinations.filter(d => 
+          (d.city || "").toLowerCase().includes(debouncedQuery.toLowerCase())
+        );
+        setSuggestions(fallback);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+    fetchSuggestions();
+  }, [debouncedQuery, allDestinations]);
 
   const handleSearch = () => {
     setAppliedSearch({ ...searchState });
@@ -78,19 +127,33 @@ function MobileSearchBar() {
                     className="w-full h-14 pl-12 pr-4 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 dark:text-white"
                   />
                 </div>
-                <div className="flex flex-col gap-1">
-                  {MOCK_DESTINATIONS.map(d => (
-                    <button 
-                      key={d} 
-                      className="px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl dark:text-gray-200 min-h-[44px]"
-                      onClick={() => {
-                        setSearchState(s => ({ ...s, destination: d }));
-                        setStep(2);
-                      }}
-                    >
-                      {d}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto">
+                  {loadingSuggestions ? (
+                    <div className="p-4 text-center text-gray-400 text-sm">Searching destinations...</div>
+                  ) : suggestions.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <p className="text-gray-500 text-sm">No destinations found for "{searchState.destination}"</p>
+                    </div>
+                  ) : (
+                    suggestions.map((item, idx) => (
+                      <button 
+                        key={idx} 
+                        className="px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl min-h-[44px] flex items-center gap-3"
+                        onClick={() => {
+                          setSearchState(s => ({ ...s, destination: item.city }));
+                          setStep(2);
+                        }}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex flex-shrink-0 items-center justify-center">
+                          <MapPin className="text-gray-500 w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="dark:text-gray-200 font-medium">{item.city}</div>
+                          <div className="text-xs text-gray-500">{item.count} {item.count === 1 ? 'listing' : 'listings'}</div>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}

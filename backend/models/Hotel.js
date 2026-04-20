@@ -46,6 +46,8 @@ const hotelSchema = new mongoose.Schema({
   cancellationPolicy: { type: String, default: 'Flexible' },
   advanceNotice: { type: String, default: 'Same day' },
   prepTime: { type: String, default: 'None' },
+  // Listing lifecycle — 'draft' means not yet visible to guests
+  status: { type: String, enum: ['draft', 'published'], default: 'published' },
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },

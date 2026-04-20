@@ -243,10 +243,16 @@ router.post('/checkout', protect, async (req, res) => {
 
     const stripe = new Stripe(stripeConfig);
 
-    // Fetch hotel name for the Checkout Session line item
+    // Fetch hotel — validate it exists and is published before accepting payment
     const Hotel = require('../models/Hotel');
-    const hotel = await Hotel.findById(hotelId).select('title');
-    const hotelTitle = hotel?.title || 'Airbnb Stay';
+    const hotel = await Hotel.findById(hotelId).select('title status');
+    if (!hotel) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    if (hotel.status !== 'published') {
+      return res.status(403).json({ success: false, message: 'This listing is not available for booking.' });
+    }
+    const hotelTitle = hotel.title || 'Airbnb Stay';
 
     // Prevent overlapping active bookings for the same hotel
     const overlap = await Booking.findOne({

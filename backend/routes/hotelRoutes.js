@@ -92,6 +92,8 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
       beds: parseInt(beds) || 1,
       baths: parseInt(baths) || 1,
       amenities: parsedAmenities,
+      // New listings from the wizard are published immediately
+      status: req.body.status === 'draft' ? 'draft' : 'published',
     });
 
     const savedHotel = await newHotel.save();
@@ -105,8 +107,8 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
 // GET /api/hotels/cities
 router.get("/cities", async (req, res) => {
   try {
-    // Only get distinct locations for non-Experiences
-    const locations = await Hotel.find({ propertyType: { $ne: "Experience" } }).distinct("location");
+    // Only get distinct locations for published, non-Experience listings
+    const locations = await Hotel.find({ propertyType: { $ne: "Experience" }, status: "published" }).distinct("location");
     // Extract unique cities (using the part before first comma), proper case
     const cityMap = new Map();
     locations.forEach(loc => {
@@ -122,11 +124,12 @@ router.get("/cities", async (req, res) => {
   }
 });
 
-// GET /api/hotels/search — Advanced Search endpoint
+// GET /api/hotels/search — Advanced Search endpoint (published only)
 router.get("/search", async (req, res) => {
   try {
     const { city, minPrice, maxPrice, propertyType } = req.query;
-    let filter = {};
+    // Always restrict public search to published listings only
+    let filter = { status: "published" };
 
     if (city) {
       filter.location = { $regex: city, $options: "i" };
@@ -150,7 +153,7 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// GET /api/hotels/city/:city — hotels filtered by location (legacy)
+// GET /api/hotels/city/:city — hotels filtered by location (legacy, published only)
 router.get("/city/:city", async (req, res) => {
   try {
     const cityMap = {
@@ -164,8 +167,9 @@ router.get("/city/:city", async (req, res) => {
       ? { location: cityMap[key] }
       : { location: { $regex: req.params.city, $options: "i" } };
 
-    // Do not include Experiences in the generic city fetch
+    // Do not include Experiences and only show published listings
     filter.propertyType = { $ne: "Experience" };
+    filter.status = "published";
 
     const hotels = await Hotel.find(filter);
     res.json(hotels);
@@ -177,13 +181,35 @@ router.get("/city/:city", async (req, res) => {
 
 // HOST DASHBOARD API
 
-// GET /api/hotels/host/me — get host active listings
+// GET /api/hotels/host/me — get ALL host listings (including drafts)
 router.get("/host/me", authenticateToken, async (req, res) => {
   try {
     const properties = await Hotel.find({ hostId: req.user._id });
     res.json({ success: true, properties });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch properties" });
+  }
+});
+
+// PATCH /api/hotels/:id/status — host publish or unpublish a listing
+router.patch("/:id/status", authenticateToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['draft', 'published'].includes(status)) {
+      return res.status(400).json({ error: "Invalid status. Must be 'draft' or 'published'." });
+    }
+
+    const hotel = await Hotel.findOneAndUpdate(
+      { _id: req.params.id, hostId: req.user._id },
+      { $set: { status } },
+      { new: true }
+    );
+
+    if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
+    res.json({ success: true, hotel });
+  } catch (err) {
+    console.error("PATCH /api/hotels/:id/status error:", err);
+    res.status(500).json({ error: "Failed to update listing status" });
   }
 });
 
@@ -312,11 +338,10 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// GET /api/hotels — all hotels
+// GET /api/hotels — published hotels only (public listing feed)
 router.get("/", async (req, res) => {
   try {
-    const hotels = await Hotel.find({});
-    // Mongoose toJSON transform will attach .id automatically
+    const hotels = await Hotel.find({ status: "published" });
     res.json(hotels);
   } catch (err) {
     console.error("GET /api/hotels error:", err);

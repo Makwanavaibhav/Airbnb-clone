@@ -324,6 +324,17 @@ const HostDashboard = () => {
                             <img src={prop.image || prop.images?.[0]} alt={prop.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
+                            {/* Status badge */}
+                            <div className="absolute top-3 left-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${
+                                prop.status === 'published'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full inline-block ${prop.status === 'published' ? 'bg-green-500' : 'bg-amber-400'}`} />
+                                {prop.status === 'published' ? 'Published' : 'Draft'}
+                              </span>
+                            </div>
                             <div className="absolute top-4 right-4 flex gap-2">
                               <button onClick={() => setEditingProperty(prop)}
                                 className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
@@ -342,6 +353,28 @@ const HostDashboard = () => {
                               ₹{(prop.priceRaw || prop.pricePerNight || 0).toLocaleString("en-IN")}{" "}
                               <span className="font-normal text-gray-500">/ night</span>
                             </div>
+                            {/* Publish / Unpublish toggle */}
+                            <button
+                              onClick={async () => {
+                                const newStatus = prop.status === 'published' ? 'draft' : 'published';
+                                try {
+                                  const res = await fetch(`http://localhost:5001/api/hotels/${prop._id}/status`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                    body: JSON.stringify({ status: newStatus })
+                                  });
+                                  if (res.ok) fetchListings();
+                                  else alert('Failed to update listing status.');
+                                } catch (err) { console.error(err); }
+                              }}
+                              className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                prop.status === 'published'
+                                  ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                  : 'bg-[#E01561] hover:bg-[#D70466] text-white'
+                              }`}
+                            >
+                              {prop.status === 'published' ? 'Unpublish' : 'Publish listing'}
+                            </button>
                           </div>
                         </div>
                       ))}

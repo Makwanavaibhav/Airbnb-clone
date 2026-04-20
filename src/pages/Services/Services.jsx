@@ -31,16 +31,20 @@ export default function Services() {
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams();
-    if (destination && destination.toLowerCase() !== 'anywhere' && destination.toLowerCase() !== 'nearby') {
-      params.append('city', destination);
-    }
-
-    fetch(`http://localhost:5001/api/services?${params.toString()}`)
+    fetch(`http://localhost:5001/api/services`)
       .then(res => res.json())
       .then(data => {
         if (!cancelled) {
-          setServices(Array.isArray(data) ? data : []);
+          const allListings = Array.isArray(data) ? data : [];
+          const filtered = allListings.filter(l => {
+            if (!destination || destination.trim() === '' || destination.toLowerCase() === 'anywhere' || destination.toLowerCase() === 'nearby') 
+              return true;
+            
+            const query = destination.trim().toLowerCase();
+            const city = (l.city || l.location || '').trim().toLowerCase();
+            return city.includes(query);
+          });
+          setServices(filtered);
           setLoading(false);
         }
       })

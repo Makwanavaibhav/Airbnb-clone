@@ -81,9 +81,6 @@ function SearchSection({ searchContext, searchDest }) {
     
     // Construct query path
     const params = new URLSearchParams();
-    if (searchDest && searchDest !== 'anywhere' && searchDest !== 'nearby') {
-       params.append('city', searchDest);
-    }
     if (searchContext?.checkIn) params.append('checkIn', searchContext.checkIn.toISOString());
     if (searchContext?.checkOut) params.append('checkOut', searchContext.checkOut.toISOString());
     if (searchContext?.guests?.adults) params.append('guests', searchContext.guests.adults + searchContext.guests.children);
@@ -92,7 +89,15 @@ function SearchSection({ searchContext, searchDest }) {
       .then(res => res.json())
       .then(data => {
          if (!cancelled) {
-             setHotels(Array.isArray(data) ? data : []);
+             const allListings = Array.isArray(data) ? data : [];
+             const filtered = allListings.filter(l => {
+                 if (!searchDest || searchDest.trim() === '' || searchDest === 'anywhere' || searchDest === 'nearby')
+                     return true;
+                 const query = searchDest.trim().toLowerCase();
+                 const city = (l.city || l.location || '').trim().toLowerCase();
+                 return city.includes(query);
+             });
+             setHotels(filtered);
              setLoading(false);
          }
       })

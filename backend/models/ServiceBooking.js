@@ -8,6 +8,7 @@ const serviceBookingSchema = new mongoose.Schema({
   totalPrice: { type: Number, required: true },
   status: { type: String, enum: ['confirmed', 'cancelled', 'completed'], default: 'confirmed' },
   bookingType: { type: String, default: 'service' },
+  paymentIntentId: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
 

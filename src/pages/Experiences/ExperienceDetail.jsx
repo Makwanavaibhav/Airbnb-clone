@@ -6,6 +6,7 @@ import ReviewsList from '../../components/ReviewsList';
 import WriteReview from '../../components/WriteReview';
 import { Share, Heart, Star, ChevronLeft, Clock, Users, CheckCircle } from 'lucide-react';
 import axios from 'axios';
+import StripeCheckout from '../../components/StripeCheckout';
 
 const ExperienceDetail = () => {
   const { id } = useParams();
@@ -18,6 +19,9 @@ const ExperienceDetail = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [guests, setGuests] = useState(1);
   const [booking, setBooking] = useState(false);
+  const [dateError, setDateError] = useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [priceSummary, setPriceSummary] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -35,33 +39,71 @@ const ExperienceDetail = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const totalPrice = (experience?.pricePerPerson || 0) * guests;
+  const validateDates = (checkIn, checkOut, guestsCount) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!checkIn) return "Please select a date and time slot";
+
+    return null;
+  };
 
   const handleBook = async () => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
-    if (!selectedDate) {
-      setToast({ type: 'error', msg: 'Please select a date first' });
-      setTimeout(() => setToast(null), 3000);
+
+    const errorMsg = validateDates(checkInDate, checkOutDate, guests);
+    if (errorMsg) {
+      setDateError(errorMsg);
       return;
     }
+    setDateError(null);
+
     try {
       setBooking(true);
-      await axios.post('http://localhost:5001/api/bookings/experience', {
-        experienceId: experience._id,
-        hostId: experience.hostId,
-        checkIn: selectedDate.date || selectedDate,
-        checkOut: selectedDate.date || selectedDate,
-        guests,
-        totalPrice,
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setToast({ type: 'success', msg: 'Booking confirmed! 🎉' });
-      setTimeout(() => navigate('/trips'), 1500);
+      const res = await fetch('http://localhost:5001/api/payments/experience/create-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ experienceId: id, checkIn: selectedDate?.date, checkOut: selectedDate?.date, guests })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setDateError(data.message || 'Payment initiation failed');
+        return;
+      }
+      
+      setClientSecret(data.clientSecret);
+      setPriceSummary({ total: data.total, subtotal: data.subtotal, serviceFee: data.serviceFee, nights: data.nights });
     } catch (err) {
-      setToast({ type: 'error', msg: err.response?.data?.message || 'Failed to book' });
-      setTimeout(() => setToast(null), 4000);
+      setDateError('Failed to connect to payment server. Please try again.');
     } finally {
       setBooking(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentIntentId) => {
+    try {
+      const res = await fetch('http://localhost:5001/api/payments/confirm-booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ paymentIntentId, bookingType: 'experience' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToast({ type: 'success', msg: 'Booking confirmed! 🎉' });
+        setTimeout(() => navigate('/trips'), 1500);
+      } else {
+        setDateError(data.message || "Failed to confirm booking.");
+      }
+    } catch (err) {
+      setDateError("Network error while confirming booking.");
     }
   };
 
@@ -210,30 +252,39 @@ const ExperienceDetail = () => {
               <p className="text-sm font-semibold text-rose-600 mb-4">Free cancellation</p>
             )}
 
-            {/* Date picker */}
+            {/* Available dates card list */}
             {availableDates.length > 0 ? (
               <div className="mb-4">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Available dates</p>
-                <div className="max-h-[200px] overflow-y-auto flex flex-col gap-2">
+                <div className="max-h-[300px] overflow-y-auto flex flex-col gap-3 pr-2 custom-scrollbar">
                   {availableDates.map((slot, idx) => {
                     const d = new Date(slot.date);
-                    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    const isToday = d.setHours(0,0,0,0) === new Date().setHours(0,0,0,0);
+                    const isTomorrow = d.setHours(0,0,0,0) === new Date(Date.now() + 86400000).setHours(0,0,0,0);
+                    const labelPrefix = isToday ? "Today, " : isTomorrow ? "Tomorrow, " : d.toLocaleDateString('en-GB', { weekday: 'long' }) + ", ";
+                    const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+                    
                     const isSelected = selectedDate === slot;
                     return (
                       <button
                         key={idx}
                         onClick={() => setSelectedDate(slot)}
-                        className={`border rounded-xl p-3 text-left transition ${
+                        className={`w-full border rounded-[16px] p-4 text-left transition ${
                           isSelected
-                            ? 'border-gray-900 dark:border-white border-2 bg-gray-50 dark:bg-gray-800'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                            ? 'border-black dark:border-white border-2 bg-gray-50 dark:bg-gray-800'
+                            : 'border-gray-300 dark:border-gray-700 hover:border-gray-400'
                         }`}
+                        disabled={clientSecret != null}
                       >
-                        <div className="flex justify-between dark:text-white text-sm font-semibold">
-                          <span>{label}</span>
-                          <span>{slot.timeRange}</span>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold text-[15px] dark:text-white">{labelPrefix}{dateStr}</div>
+                            <div className="text-sm text-gray-500 mt-1">{slot.timeRange}</div>
+                          </div>
+                          <div className="font-semibold text-sm dark:text-white">
+                            {slot.spotsAvailable} spots available
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5">{slot.spotsAvailable} spots available</div>
                       </button>
                     );
                   })}
@@ -245,12 +296,15 @@ const ExperienceDetail = () => {
                 <input
                   type="date"
                   min={new Date().toISOString().split('T')[0]}
-                  value={selectedDate ? new Date(selectedDate).toISOString().split('T')[0] : ''}
-                  onChange={e => setSelectedDate(e.target.value)}
+                  value={selectedDate ? new Date(selectedDate.date).toISOString().split('T')[0] : ''}
+                  onChange={e => setSelectedDate({ date: e.target.value, timeRange: '10:00 AM - 1:00 PM', spotsAvailable: 10 })}
                   className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400"
+                  disabled={clientSecret != null}
                 />
               </div>
             )}
+
+            {dateError && <p className="text-red-500 font-semibold text-sm mb-4">{dateError}</p>}
 
             {/* Guests counter */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl mb-4">
@@ -262,34 +316,54 @@ const ExperienceDetail = () => {
                 <div className="flex items-center gap-3">
                   <button onClick={() => setGuests(g => Math.max(1, g - 1))}
                     className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center dark:text-white disabled:opacity-30"
-                    disabled={guests <= 1}>-</button>
+                    disabled={guests <= 1 || clientSecret != null}>-</button>
                   <span className="font-semibold dark:text-white w-4 text-center">{guests}</span>
                   <button onClick={() => setGuests(g => Math.min(experience.groupSize || 10, g + 1))}
-                    className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center dark:text-white">+</button>
+                    className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center dark:text-white disabled:opacity-30"
+                    disabled={clientSecret != null}>+</button>
                 </div>
               </div>
             </div>
 
-            {/* Price breakdown */}
-            <div className="mb-4 text-sm dark:text-gray-300">
-              <div className="flex justify-between py-1">
-                <span className="underline">₹{experience.pricePerPerson?.toLocaleString('en-IN')} × {guests} guest{guests > 1 ? 's' : ''}</span>
-                <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+            {/* Checkout State Switch */}
+            {clientSecret && priceSummary ? (
+              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-lg font-bold mb-3 dark:text-white">Payment</h4>
+                <div className="mb-4 text-sm dark:text-gray-300 space-y-2">
+                  <div className="flex justify-between">
+                    <span>₹{experience.pricePerPerson?.toLocaleString('en-IN')} × {guests} guest{guests > 1 ? 's ' : ' '}</span>
+                    <span>₹{priceSummary.subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Service Fee</span>
+                    <span>₹{priceSummary.serviceFee.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <StripeCheckout 
+                  clientSecret={clientSecret} 
+                  total={priceSummary.total} 
+                  onSuccess={handlePaymentSuccess} 
+                  onError={(err) => setDateError(`Card Error: ${err}`)}
+                />
+                <button
+                  onClick={() => {setClientSecret(null); setPriceSummary(null); setDateError(null);}}
+                  className="w-full mt-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 rounded-xl transition"
+                >
+                  Edit details
+                </button>
               </div>
-            </div>
-            <div className="flex justify-between font-bold dark:text-white border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
-              <span>Total</span>
-              <span>₹{totalPrice.toLocaleString('en-IN')}</span>
-            </div>
-
-            <button
-              onClick={handleBook}
-              disabled={booking}
-              className="w-full bg-[#FF385C] hover:bg-[#D90B38] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition"
-            >
-              {booking ? 'Booking...' : 'Reserve'}
-            </button>
-            <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
+            ) : (
+              <>
+                <button
+                  onClick={handleBook}
+                  disabled={booking}
+                  className="w-full bg-[#FF385C] hover:bg-[#D90B38] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition mt-2"
+                >
+                  {booking ? 'Processing...' : 'Reserve'}
+                </button>
+                <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
+              </>
+            )}
           </div>
         </div>
       </div>
