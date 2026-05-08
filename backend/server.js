@@ -88,7 +88,15 @@ io.on('connection', (socket) => {
       let authorized = false;
       const parts = roomId.split('_');
       
-      if (parts.length >= 3) {
+      if (parts[0] === 'dm' && parts.length === 3) {
+        // Format: dm_{userId1}_{userId2}
+        const id1 = parts[1];
+        const id2 = parts[2];
+        if (String(socket.userId) === String(id1) || String(socket.userId) === String(id2)) {
+          authorized = true;
+        }
+      } else if (parts.length >= 3) {
+        // Legacy format: hotelId_guestId_hostId
         const guestId = parts[1];
         const hostId = parts[2];
         if (String(socket.userId) === String(guestId) || String(socket.userId) === String(hostId)) {
@@ -110,7 +118,7 @@ io.on('connection', (socket) => {
       }
 
       socket.join(roomId);
-      console.log(`User joined conversation: ${roomId}`);
+      console.log(`User ${socket.userId} joined room: ${roomId}`);
     } catch (err) {
       console.error("Error joining conversation:", err);
     }

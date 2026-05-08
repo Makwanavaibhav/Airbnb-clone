@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
-import { socket } from '../../lib/socket';
+import { socket, connectSocket, disconnectSocket } from '../../lib/socket';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
@@ -48,6 +48,7 @@ const Messages = () => {
     try { tempId = JSON.parse(atob(localStorage.getItem('token').split('.')[1])).userId; } catch(e) {}
   }
   const currentUserId = String(tempId || '');
+  const token = getToken?.() || localStorage.getItem('token') || '';
 
   const [threads, setThreads] = useState([]);      // [{conversationId, lastMsg, otherUser}]
   const [allMessages, setAllMessages] = useState({}); // {convoId: [msgs]}
@@ -111,7 +112,8 @@ const Messages = () => {
 
   // ── 3. Socket.io setup ───────────────────────────────────────────────────
   useEffect(() => {
-    socket.connect();
+    // Connect with JWT so the server middleware can authenticate us
+    connectSocket(token);
 
     const handleReceiveMessage = (newMsg) => {
       const convoId = newMsg.conversationId;
@@ -132,23 +134,43 @@ const Messages = () => {
       });
     };
 
+    // Join ALL existing conversation rooms when the socket connects/reconnects
+    // This is critical — without this the host never receives messages in rooms
+    // they haven't actively clicked in this session.
+    const joinAllRooms = () => {
+      setThreads(prev => {
+        prev.forEach(t => socket.emit('join_room', t.conversationId));
+        return prev;
+      });
+    };
+
     socket.on('receive_message', handleReceiveMessage);
+    socket.on('connect', joinAllRooms);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
-      socket.disconnect();
+      socket.off('connect', joinAllRooms);
+      disconnectSocket();
     };
-  }, [currentUserId]);
+  }, [currentUserId, token]); // eslint-disable-line
 
   // ── 4. Join socket room when active conversation changes ─────────────────
   useEffect(() => {
     if (activeConvo) {
-      // Use join_room with the specific roomId (convoId)
+      // Ensure we're connected with auth before joining room
+      if (!socket.connected) connectSocket(token);
       socket.emit('join_room', activeConvo);
     }
     // Scroll to bottom
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-  }, [activeConvo]);
+  }, [activeConvo, token]); // eslint-disable-line
+
+  // ── 4b. Once threads load, join all existing rooms ───────────────────────
+  useEffect(() => {
+    if (threads.length === 0) return;
+    if (!socket.connected) connectSocket(token);
+    threads.forEach(t => socket.emit('join_room', t.conversationId));
+  }, [threads.length]); // eslint-disable-line
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {

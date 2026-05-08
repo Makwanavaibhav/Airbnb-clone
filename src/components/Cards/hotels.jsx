@@ -154,17 +154,63 @@ function Cards({ activeTab }) {
   const { appliedSearch } = useSearch();
   const searchDest = (appliedSearch?.destination || "").toLowerCase();
 
-  // Fetch dynamic cities from backend
-  const [CITY_ROUTES, setCityRoutes] = useState([
-    { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "rajasthan"] },
-    { key: "goa", title: "Top picks in Goa", match: ["goa", "north goa"] },
-    { key: "mumbai", title: "Places to stay in Mumbai", match: ["mumbai", "maharashtra"] }
-  ]);
+  // ── Dynamic city sections: fetch from backend so any new published listing auto-appears ──
+  const FALLBACK_ROUTES = [
+    { key: "udaipur", title: "Popular homes in Udaipur", match: ["udaipur", "pichola", "rajasthan"] },
+    { key: "goa",     title: "Top picks in Goa",         match: ["goa", "north goa", "south goa", "calangute", "baga", "anjuna"] },
+    { key: "mumbai",  title: "Places to stay in Mumbai", match: ["mumbai", "bandra", "andheri", "maharashtra"] }
+  ];
+
+  const [CITY_ROUTES, setCityRoutes] = useState(FALLBACK_ROUTES);
+  const [citiesLoaded, setCitiesLoaded] = useState(false);
 
   useEffect(() => {
-    // Preserving the 3 city view on home page by keeping default CITY_ROUTES
-    // Dynamic fetching of cities would overwrite the 3 specific choices below.
-  }, []);
+    fetch("http://localhost:5001/api/hotels/cities")
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success || !data.cities?.length) return;
+
+        // Build a route for every distinct city that has at least 1 published listing
+        const dynamicRoutes = data.cities.map(city => {
+          const lower = city.toLowerCase();
+          // Friendly section title
+          const title = lower === "goa" || lower.includes("goa")
+            ? "Top picks in Goa"
+            : lower === "udaipur" || lower.includes("udaipur") || lower.includes("pichola")
+            ? "Popular homes in Udaipur"
+            : lower === "mumbai" || lower.includes("mumbai") || lower.includes("bandra") || lower.includes("andheri")
+            ? "Places to stay in Mumbai"
+            : `Places to stay in ${city}`;
+
+          return {
+            key: lower,           // used as the city param in /api/hotels/city/:city
+            title,
+            match: [lower]
+          };
+        });
+
+        // De-duplicate by key so Mumbai's many localities collapse into one section
+        const seen = new Set();
+        const deduped = dynamicRoutes.filter(r => {
+          const base =
+            r.key.includes("goa") || r.match.some(k => k.includes("goa"))     ? "goa"
+            : r.key.includes("udaipur") || r.key.includes("pichola")           ? "udaipur"
+            : r.key.includes("mumbai") || r.key.includes("bandra") || r.key.includes("andheri") ? "mumbai"
+            : r.key;
+          if (seen.has(base)) return false;
+          seen.add(base);
+          r.key = base; // normalise key so /api/hotels/city/ query works
+          return true;
+        });
+
+        setCityRoutes(deduped.length ? deduped : FALLBACK_ROUTES);
+        setCitiesLoaded(true);
+      })
+      .catch(() => {
+        setCityRoutes(FALLBACK_ROUTES); // silent fallback on network error
+        setCitiesLoaded(true);
+      });
+  }, []); // eslint-disable-line
 
   // If searchDest is empty or contains "nearby", show all predefined sections.
   // Otherwise, use deep search.
@@ -228,4 +274,4 @@ function Cards({ activeTab }) {
   );
 }
 
-export default Cards;
+export default Cards;
