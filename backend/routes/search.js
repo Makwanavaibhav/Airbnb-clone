@@ -10,9 +10,10 @@ router.get('/destinations', async (req, res) => {
     const query = req.query.q;
 
     if (!query || query.trim() === '') {
-      // Return all distinct cities — only from published hotels
+      // Return all distinct locations — only from published hotels
+      // NOTE: Hotel schema uses 'location', not 'city'
       const allCities = [
-        ...await Hotel.distinct('city', { status: 'published' }),
+        ...await Hotel.distinct('location', { status: 'published' }),
         ...await Experience.distinct('city'),
         ...await Service.distinct('city')
       ];
@@ -27,7 +28,7 @@ router.get('/destinations', async (req, res) => {
         const regexStr = `^${city.replace(/[.*+?^$/{}()|[\]\\]/g, '\\$&')}$`;
         const regex = new RegExp(regexStr, 'i');
         const [h, e, s] = await Promise.all([
-          Hotel.countDocuments({ city: regex, status: 'published' }),
+          Hotel.countDocuments({ location: regex, status: 'published' }), // Hotel uses 'location'
           Experience.countDocuments({ city: regex }),
           Service.countDocuments({ city: regex })
         ]);
@@ -42,7 +43,7 @@ router.get('/destinations', async (req, res) => {
     const regex = new RegExp(safeQ, 'i');
 
     const [hotelCities, expCities, svcCities] = await Promise.all([
-      Hotel.distinct('city', { city: regex, status: 'published' }),
+      Hotel.distinct('location', { location: regex, status: 'published' }), // Hotel uses 'location'
       Experience.distinct('city', { city: regex }),
       Service.distinct('city', { city: regex })
     ]);
@@ -55,7 +56,7 @@ router.get('/destinations', async (req, res) => {
         const exactRegexStr = `^${city.replace(/[.*+?^$/{}()|[\]\\]/g, '\\$&')}$`;
         const exactRegex = new RegExp(exactRegexStr, 'i');
         const [h, e, s] = await Promise.all([
-          Hotel.countDocuments({ city: exactRegex, status: 'published' }),
+          Hotel.countDocuments({ location: exactRegex, status: 'published' }), // Hotel uses 'location'
           Experience.countDocuments({ city: exactRegex }),
           Service.countDocuments({ city: exactRegex })
         ]);

@@ -9,6 +9,8 @@ export const AuthProvider = ({ children }) => {
     try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
   });
   const [wishlistIds, setWishlistIds] = useState(new Set());
+  // loading = true while we hydrate user profile on startup
+  const [loading, setLoading] = useState(!!localStorage.getItem("token"));
 
   // Mutable ref so toggleWishlist never has stale closure (Fix #3)
   const wishlistIdsRef = useRef(wishlistIds);
@@ -22,6 +24,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
     }
+    // Always clear stale profile cache so fetchUserProfile re-fetches fresh data on next startup
+    setLoading(true);
     setIsLoggedIn(true);
   };
 
@@ -117,13 +121,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      fetchWishlistIds();
-      fetchUserProfile();
+      setLoading(true);
+      Promise.allSettled([fetchWishlistIds(), fetchUserProfile()]).finally(() => {
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
   }, [isLoggedIn]); // eslint-disable-line
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout, user, getToken, wishlistIds, toggleWishlist, fetchWishlistIds }}>
+    <AuthContext.Provider value={{ isLoggedIn, login, logout, user, getToken, wishlistIds, toggleWishlist, fetchWishlistIds, loading }}>
       {children}
     </AuthContext.Provider>
   );

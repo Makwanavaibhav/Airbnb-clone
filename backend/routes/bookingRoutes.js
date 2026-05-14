@@ -155,36 +155,122 @@ router.post('/service', protect, async (req, res) => {
 // Cancel a booking
 router.post('/:bookingId/cancel', protect, async (req, res) => {
   try {
-    const booking = await Booking.findOne({
-      _id: req.params.bookingId,
-      userId: req.user._id
-    });
+    const bookingId = req.params.bookingId;
+    const userId = req.user._id;
+
+    let booking = await Booking.findOne({ _id: bookingId, userId });
+    let modelType = 'Hotel';
 
     if (!booking) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Booking not found' 
-      });
+      booking = await ExperienceBooking.findOne({ _id: bookingId, userId });
+      if (booking) modelType = 'Experience';
+    }
+    if (!booking) {
+      booking = await ServiceBooking.findOne({ _id: bookingId, userId });
+      if (booking) modelType = 'Service';
     }
 
-    const checkInDate = new Date(booking.checkInDate);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const Hotel = require('../models/Hotel');
+    const Experience = require('../models/Experience');
+    const Service = require('../models/Service');
+    const Message = require('../models/Message');
+
+    let policy = 'Flexible';
+    let checkInDate;
+    let hostId;
+    let title = 'your listing';
+
+    if (modelType === 'Hotel') {
+      checkInDate = new Date(booking.checkInDate);
+      const hotel = await Hotel.findById(booking.hotelId).select('cancellationPolicy hostId title');
+      if (hotel) {
+        policy = hotel.cancellationPolicy || 'Flexible';
+        hostId = hotel.hostId;
+        title = hotel.title;
+      }
+    } else if (modelType === 'Experience') {
+      checkInDate = new Date(booking.checkIn);
+      const exp = await Experience.findById(booking.experienceId).select('cancellationPolicy hostId title');
+      if (exp) {
+        policy = exp.cancellationPolicy || 'Flexible';
+        hostId = exp.hostId;
+        title = exp.title;
+      }
+    } else {
+      checkInDate = new Date(booking.sessionDate);
+      const svc = await Service.findById(booking.serviceId).select('cancellationPolicy hostId title');
+      if (svc) {
+        policy = svc.cancellationPolicy || 'Flexible';
+        hostId = svc.hostId;
+        title = svc.title;
+      }
+    }
+
     const now = new Date();
     const hoursDifference = (checkInDate - now) / (1000 * 60 * 60);
 
-    if (hoursDifference < 24) {
+    let requiredHours = 24;
+    if (policy === 'Moderate') requiredHours = 120; // 5 days
+    if (policy === 'Strict') requiredHours = 336; // 14 days
+
+    if (hoursDifference < requiredHours) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Cancellations must be made at least 24 hours before check-in' 
+        message: `Under the ${policy} policy, cancellations must be made at least ${requiredHours} hours before check-in.` 
       });
+    }
+
+    // Process Stripe Refund if paid
+    if (booking.paymentId || booking.paymentIntentId) {
+      const Stripe = require('stripe');
+      const stripeConfig = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY_SECRET;
+      if (stripeConfig) {
+        const stripe = new Stripe(stripeConfig);
+        try {
+          const paymentId = booking.paymentId || booking.paymentIntentId;
+          let paymentIntentIdToRefund = paymentId;
+          
+          if (modelType === 'Hotel') {
+            const session = await stripe.checkout.sessions.retrieve(paymentId);
+            paymentIntentIdToRefund = session.payment_intent;
+          }
+          
+          if (paymentIntentIdToRefund) {
+            await stripe.refunds.create({
+              payment_intent: paymentIntentIdToRefund,
+            });
+          }
+        } catch (refundError) {
+          console.error("Refund failed:", refundError);
+          return res.status(500).json({ success: false, message: 'Cancellation failed during refund processing.', error: refundError.message });
+        }
+      }
     }
 
     booking.status = 'cancelled';
     booking.cancelledAt = new Date();
     await booking.save();
 
+    // Notify Host via Message
+    if (hostId && hostId.toString() !== userId.toString()) {
+      const ids = [userId.toString(), hostId.toString()].sort();
+      const conversationId = `${ids[0]}_${ids[1]}`;
+      await Message.create({
+        conversationId,
+        senderId: userId,
+        receiverId: hostId,
+        message: `System: I have cancelled my booking for ${title}. The slot is now free.`,
+        read: false
+      });
+    }
+
     res.json({ 
       success: true, 
-      message: 'Booking cancelled successfully',
+      message: 'Booking cancelled successfully and fully refunded.',
       booking 
     });
   } catch (error) {

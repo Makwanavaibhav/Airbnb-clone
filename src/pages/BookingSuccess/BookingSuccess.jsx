@@ -19,6 +19,16 @@ const BookingSuccess = () => {
       return;
     }
 
+    // Bug #9 fix: skip re-calling Stripe if we already confirmed this booking in this browser session
+    const cached = sessionStorage.getItem(`booking_confirmed_${bookingId}`);
+    if (cached) {
+      try {
+        setBooking(JSON.parse(cached));
+        setStatus('success');
+        return;
+      } catch { /* fall through to re-verify */ }
+    }
+
     const confirm = async () => {
       try {
         const res = await fetch('http://localhost:5001/api/bookings/verify-payment', {
@@ -32,6 +42,8 @@ const BookingSuccess = () => {
         const data = await res.json();
 
         if (data.success) {
+          // Cache so reloads don't re-call Stripe
+          sessionStorage.setItem(`booking_confirmed_${bookingId}`, JSON.stringify(data.booking));
           setBooking(data.booking);
           setStatus('success');
         } else {

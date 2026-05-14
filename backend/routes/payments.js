@@ -49,6 +49,16 @@ router.post('/experience/create-intent', protect, async (req, res) => {
       return res.status(400).json({ success: false, message: `Exceeds maximum guest limit of ${exp.groupSize}` });
     }
 
+    // Prevent double booking for the same experience date
+    const overlap = await ExperienceBooking.findOne({
+      experienceId,
+      checkIn: inDate,
+      status: { $in: ['pending', 'confirmed'] }
+    });
+    if (overlap) {
+      return res.status(409).json({ success: false, message: 'This experience slot is already fully booked' });
+    }
+
     // Calculations
     const nights = Math.ceil((outDate - inDate) / (1000 * 60 * 60 * 24));
     const subtotal = exp.pricePerPerson * numGuests * nights;
@@ -111,6 +121,16 @@ router.post('/service/create-intent', protect, async (req, res) => {
     }
     if (sDate > maxDate) {
       return res.status(400).json({ success: false, message: 'Cannot book more than 1 year in advance' });
+    }
+
+    // Prevent double booking for the same service session
+    const overlap = await ServiceBooking.findOne({
+      serviceId,
+      sessionDate: sDate,
+      status: { $in: ['pending', 'confirmed'] }
+    });
+    if (overlap) {
+      return res.status(409).json({ success: false, message: 'This service session is already booked' });
     }
 
     // Calculations

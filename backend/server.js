@@ -127,7 +127,7 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     const { roomId, conversationId, senderId, receiverId, message } = data;
     const finalConversationId = roomId || conversationId;
-    
+
     if (!socket.userId || String(socket.userId) !== String(senderId)) {
       return;
     }
@@ -136,17 +136,23 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const Message = require('./models/Message');
-    const newMessage = await Message.create({
-      conversationId: finalConversationId,
-      senderId,
-      receiverId,
-      message,
-      timestamp: new Date()
-    });
+    try {
+      const Message = require('./models/Message');
+      const newMessage = await Message.create({
+        conversationId: finalConversationId,
+        senderId,
+        receiverId,
+        message,
+        timestamp: new Date()
+      });
 
-    // Broadcast to everyone in the room EXCEPT the sender
-    socket.to(finalConversationId).emit('receive_message', newMessage);
+      // Broadcast to everyone in the room INCLUDING the sender (so sender gets the DB-saved message with real _id)
+      io.to(finalConversationId).emit('receive_message', newMessage);
+    } catch (err) {
+      console.error('send_message error:', err);
+      // Notify the sender so they know the message failed
+      socket.emit('message_error', { error: 'Failed to save message. Please try again.' });
+    }
   });
 
   socket.on('disconnect', () => {

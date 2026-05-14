@@ -33,7 +33,7 @@ router.get('/conversations', protect, async (req, res) => {
 });
 
 // Get all messages for a specific user (legacy) or conversation history
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
   try {
     const id = req.params.id;
     let query = {};

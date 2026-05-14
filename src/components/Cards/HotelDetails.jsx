@@ -357,6 +357,16 @@ const HotelDetails = () => {
   return (
     <div className="max-w-[1120px] mx-auto px-6 pt-6 pb-24 text-gray-900 dark:text-gray-100">
 
+      {/* Back to home arrow — always visible for navigation */}
+      <button
+        onClick={() => navigate('/')}
+        className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 px-3 py-2 rounded-xl transition-colors -ml-3"
+        aria-label="Back to home"
+      >
+        <ChevronLeft className="w-5 h-5" />
+        <span>Back</span>
+      </button>
+
       {/* Title & Header section */}
       <h1 className="text-[26px] font-semibold mb-2">{data.title}</h1>
 

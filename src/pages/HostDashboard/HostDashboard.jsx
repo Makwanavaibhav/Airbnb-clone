@@ -115,6 +115,65 @@ const HostDashboard = () => {
 
   const handleResumeDraft = (draft) => { setResumeDraft(draft); setShowListingForm(true); };
 
+  // Bug #11 fix: shared card renderer used by both published and draft sections
+  const renderPropertyCard = (prop) => (
+    <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
+      <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
+        <img src={prop.image || prop.images?.[0]} alt={prop.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
+        {/* Status badge */}
+        <div className="absolute top-3 left-3">
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${
+            prop.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full inline-block ${prop.status === 'published' ? 'bg-green-500' : 'bg-amber-400'}`} />
+            {prop.status === 'published' ? 'Published' : 'Draft'}
+          </span>
+        </div>
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button onClick={() => setEditingProperty(prop)}
+            className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
+            <Edit2 className="w-4 h-4 text-gray-700" />
+          </button>
+          <button onClick={() => handleDelete(prop._id || prop.id)}
+            className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
+            <Trash2 className="w-4 h-4 text-red-600" />
+          </button>
+        </div>
+      </div>
+      <div className="p-4">
+        <h3 className="font-semibold text-[17px] truncate">{prop.title}</h3>
+        <p className="text-gray-500 text-[15px] truncate">{prop.location}</p>
+        <div className="mt-2 text-[15px] font-semibold">
+          ₹{(prop.priceRaw || prop.pricePerNight || 0).toLocaleString("en-IN")}{" "}
+          <span className="font-normal text-gray-500">/ night</span>
+        </div>
+        <button
+          onClick={async () => {
+            const newStatus = prop.status === 'published' ? 'draft' : 'published';
+            try {
+              const res = await fetch(`http://localhost:5001/api/hotels/${prop._id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                body: JSON.stringify({ status: newStatus })
+              });
+              if (res.ok) fetchListings();
+              else alert('Failed to update listing status.');
+            } catch (err) { console.error(err); }
+          }}
+          className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+            prop.status === 'published'
+              ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+              : 'bg-[#E01561] hover:bg-[#D70466] text-white'
+          }`}
+        >
+          {prop.status === 'published' ? 'Unpublish' : 'Publish listing'}
+        </button>
+      </div>
+    </div>
+  );
+
   if (!isLoggedIn) { navigate("/login"); return null; }
 
   if (showListingForm) {
@@ -311,76 +370,37 @@ const HostDashboard = () => {
                       Create a new listing
                     </button>
                   </div>
-                ) : properties.length > 0 && (
+                ) : properties.length > 0 && (() => {
+                  // Bug #11 fix: split into published vs draft accurately
+                  const publishedProps = properties.filter(p => p.status === 'published');
+                  const draftProps = properties.filter(p => p.status !== 'published');
+                  return (
                   <div className="w-full">
-                    <h3 className="text-base font-semibold text-gray-600 uppercase tracking-wide mb-4 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                      Published ({properties.length})
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {properties.map(prop => (
-                        <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
-                          <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
-                            <img src={prop.image || prop.images?.[0]} alt={prop.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
-                            {/* Status badge */}
-                            <div className="absolute top-3 left-3">
-                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${
-                                prop.status === 'published'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                <span className={`w-1.5 h-1.5 rounded-full inline-block ${prop.status === 'published' ? 'bg-green-500' : 'bg-amber-400'}`} />
-                                {prop.status === 'published' ? 'Published' : 'Draft'}
-                              </span>
-                            </div>
-                            <div className="absolute top-4 right-4 flex gap-2">
-                              <button onClick={() => setEditingProperty(prop)}
-                                className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
-                                <Edit2 className="w-4 h-4 text-gray-700" />
-                              </button>
-                              <button onClick={() => handleDelete(prop._id || prop.id)}
-                                className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
-                                <Trash2 className="w-4 h-4 text-red-600" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="p-4">
-                            <h3 className="font-semibold text-[17px] truncate">{prop.title}</h3>
-                            <p className="text-gray-500 text-[15px] truncate">{prop.location}</p>
-                            <div className="mt-2 text-[15px] font-semibold">
-                              ₹{(prop.priceRaw || prop.pricePerNight || 0).toLocaleString("en-IN")}{" "}
-                              <span className="font-normal text-gray-500">/ night</span>
-                            </div>
-                            {/* Publish / Unpublish toggle */}
-                            <button
-                              onClick={async () => {
-                                const newStatus = prop.status === 'published' ? 'draft' : 'published';
-                                try {
-                                  const res = await fetch(`http://localhost:5001/api/hotels/${prop._id}/status`, {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-                                    body: JSON.stringify({ status: newStatus })
-                                  });
-                                  if (res.ok) fetchListings();
-                                  else alert('Failed to update listing status.');
-                                } catch (err) { console.error(err); }
-                              }}
-                              className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
-                                prop.status === 'published'
-                                  ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                  : 'bg-[#E01561] hover:bg-[#D70466] text-white'
-                              }`}
-                            >
-                              {prop.status === 'published' ? 'Unpublish' : 'Publish listing'}
-                            </button>
-                          </div>
+                    {publishedProps.length > 0 && (
+                      <>
+                        <h3 className="text-base font-semibold text-gray-600 uppercase tracking-wide mb-4 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                          Published ({publishedProps.length})
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                          {publishedProps.map(prop => renderPropertyCard(prop))}
                         </div>
-                      ))}
-                    </div>
+                      </>
+                    )}
+                    {draftProps.length > 0 && (
+                      <>
+                        <h3 className="text-base font-semibold text-gray-600 uppercase tracking-wide mb-4 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                          Unlisted / Draft ({draftProps.length})
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {draftProps.map(prop => renderPropertyCard(prop))}
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
+                  );
+                })()}
               </>
             )}
           </div>
@@ -436,12 +456,14 @@ const HostDashboard = () => {
                             </span>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => navigate(`/messages?hostId=${guest._id}`)}
-                          className="self-center md:self-auto px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
-                        >
-                          Message
-                        </button>
+                        {guest?._id ? (
+                          <button 
+                            onClick={() => navigate(`/messages?hostId=${guest._id}`)}
+                            className="self-center md:self-auto px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                          >
+                            Message
+                          </button>
+                        ) : null}
                       </div>
                     );
                   })}

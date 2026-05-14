@@ -4,6 +4,7 @@ import {
   Navigation, Building2, Palmtree, Landmark, Trees, Compass, Calendar
 } from "lucide-react";
 import { useSearch } from "../../../context/SearchContext.jsx";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // Removed hardcoded DESTINATIONS
 
@@ -121,6 +122,8 @@ function GuestCounter({ label, sublabel, value, onInc, onDec, min = 0, max = 10 
 // ─── Main SearchBar ───────────────────────────────────────────────────────────
 function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, onExpand, where, dateLabel, guestLabel }) {
   const { searchState, setSearchState, appliedSearch, setAppliedSearch } = useSearch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeSection, setActiveSection]   = useState(null);
   const [calendarMode, setCalendarMode]     = useState("dates");
   const [hoveredDay, setHoveredDay]         = useState(null);
@@ -528,6 +531,9 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
                 setActiveSection(null);
                 if (compactSearchRef?.current) {
                   // close expanded bar if we search from it
+                }
+                if (location.pathname !== "/") {
+                  navigate("/");
                 }
               }}
               className={`flex items-center gap-2 rounded-full text-white font-semibold transition-all duration-200 ${

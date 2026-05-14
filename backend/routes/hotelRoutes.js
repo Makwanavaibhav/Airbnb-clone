@@ -5,7 +5,6 @@ const multerS3 = require("multer-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
 const { authenticateToken } = require("../middleware/authMiddleware");
 const Hotel = require("../models/Hotel");
-const Review = require("../models/Review");
 
 // S3 Configuration Fallback 
 let upload;
@@ -280,42 +279,21 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   }
 });
 
-// REVIEWS API
+// NOTE: Reviews are handled exclusively by /api/reviews (reviewRoutes.js)
+// which uses the canonical schema { targetId, targetType, rating, comment }.
+// The old /api/hotels/:id/reviews routes have been removed to avoid schema conflicts.
 
-// POST /api/hotels/:id/reviews — add review
-router.post("/:id/reviews", authenticateToken, async (req, res) => {
+// GET /api/hotels — published hotels only (public listing feed)
+// IMPORTANT: This must be declared before GET /:id to avoid route shadowing.
+router.get("/", async (req, res) => {
   try {
-    const { rating, text } = req.body;
-    if (!rating || !text) return res.status(400).json({ error: "Rating and text required" });
-
-    const review = await Review.create({
-      userId: req.user._id,
-      hotelId: req.params.id,
-      rating,
-      text
-    });
-
-    // Recalculate average rating for the hotel
-    const allReviews = await Review.find({ hotelId: req.params.id });
-    const avgRating = allReviews.reduce((acc, item) => acc + item.rating, 0) / allReviews.length;
-    await Hotel.findByIdAndUpdate(req.params.id, { rating: avgRating.toFixed(1) });
-
-    res.status(201).json({ success: true, review });
+    const hotels = await Hotel.find({ status: "published" });
+    res.json(hotels);
   } catch (err) {
-    res.status(500).json({ error: "Failed to post review" });
+    console.error("GET /api/hotels error:", err);
+    res.status(500).json({ error: "Failed to fetch hotels" });
   }
 });
-
-// GET /api/hotels/:id/reviews — get reviews
-router.get("/:id/reviews", async (req, res) => {
-  try {
-    const reviews = await Review.find({ hotelId: req.params.id }).populate("userId", "firstName lastName");
-    res.json({ success: true, reviews });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch reviews" });
-  }
-});
-
 
 // GET /api/hotels/:id  — single hotel by id
 router.get("/:id", async (req, res) => {
@@ -337,17 +315,5 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch hotel" });
   }
 });
-
-// GET /api/hotels — published hotels only (public listing feed)
-router.get("/", async (req, res) => {
-  try {
-    const hotels = await Hotel.find({ status: "published" });
-    res.json(hotels);
-  } catch (err) {
-    console.error("GET /api/hotels error:", err);
-    res.status(500).json({ error: "Failed to fetch hotels" });
-  }
-});
-
 
 module.exports = router;

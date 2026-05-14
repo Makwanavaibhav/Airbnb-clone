@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
-import { socket, connectSocket, disconnectSocket } from '../../lib/socket';
+import { socket, connectSocket } from '../../lib/socket';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
@@ -117,10 +117,23 @@ const Messages = () => {
 
     const handleReceiveMessage = (newMsg) => {
       const convoId = newMsg.conversationId;
-      setAllMessages(prev => ({
-        ...prev,
-        [convoId]: [...(prev[convoId] || []), newMsg]
-      }));
+      setAllMessages(prev => {
+        const existing = prev[convoId] || [];
+        // Deduplicate: if a temp message with same content+sender exists, replace it
+        const hasDuplicate = existing.some(
+          m => m.message === newMsg.message &&
+               String(m.senderId) === String(newMsg.senderId) &&
+               Math.abs(new Date(m.timestamp) - new Date(newMsg.timestamp)) < 10000
+        );
+        const filtered = hasDuplicate
+          ? existing.filter(m => !(
+              m.message === newMsg.message &&
+              String(m.senderId) === String(newMsg.senderId) &&
+              Math.abs(new Date(m.timestamp) - new Date(newMsg.timestamp)) < 10000
+            ))
+          : existing;
+        return { ...prev, [convoId]: [...filtered, newMsg] };
+      });
       setThreads(prev => {
         const existing = prev.find(t => t.conversationId === convoId);
         const otherId = getOtherUserId(convoId, currentUserId);
@@ -148,9 +161,11 @@ const Messages = () => {
     socket.on('connect', joinAllRooms);
 
     return () => {
+      // Bug #10 fix: only remove our specific listeners — do NOT call disconnectSocket()
+      // because socket is a module-level singleton shared across the app.
+      // Disconnecting here would sever it for all components and cause missed messages on re-mount.
       socket.off('receive_message', handleReceiveMessage);
       socket.off('connect', joinAllRooms);
-      disconnectSocket();
     };
   }, [currentUserId, token]); // eslint-disable-line
 
@@ -193,32 +208,6 @@ const Messages = () => {
     };
 
     socket.emit('send_message', messageData);
-
-    // Update the chat window instantly for the sender (local state)
-    const newLocalMsg = {
-      _id: Date.now().toString(), // temporary ID
-      conversationId: activeConvo,
-      senderId: currentUserId,
-      receiverId: otherId,
-      message: text,
-      timestamp: new Date().toISOString()
-    };
-    
-    setAllMessages(prev => ({
-      ...prev,
-      [activeConvo]: [...(prev[activeConvo] || []), newLocalMsg]
-    }));
-
-    setThreads(prev => {
-      const existing = prev.find(t => t.conversationId === activeConvo);
-      if (existing) {
-        return [
-          { ...existing, lastMsg: newLocalMsg },
-          ...prev.filter(t => t.conversationId !== activeConvo)
-        ];
-      }
-      return [{ conversationId: activeConvo, lastMsg: newLocalMsg, otherUserId: otherId }, ...prev];
-    });
 
     setInputText('');
     inputRef.current?.focus();
