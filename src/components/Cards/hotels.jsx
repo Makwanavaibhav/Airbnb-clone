@@ -83,7 +83,8 @@ function SearchSection({ searchContext, searchDest }) {
     const params = new URLSearchParams();
     if (searchContext?.checkIn) params.append('checkIn', searchContext.checkIn.toISOString());
     if (searchContext?.checkOut) params.append('checkOut', searchContext.checkOut.toISOString());
-    if (searchContext?.guests?.adults) params.append('guests', searchContext.guests.adults + searchContext.guests.children);
+    const totalGuests = (searchContext?.guests?.adults || 0) + (searchContext?.guests?.children || 0);
+    if (totalGuests > 0) params.append('guests', totalGuests);
 
     fetch(`http://localhost:5001/api/hotels/search?${params.toString()}`)
       .then(res => res.json())

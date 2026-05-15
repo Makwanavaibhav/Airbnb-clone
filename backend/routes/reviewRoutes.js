@@ -3,13 +3,39 @@ const router = express.Router();
 const Review = require('../models/Review');
 const { protect } = require('../middleware/authMiddleware');
 
+// ─── GET user's own reviews ──────────────────────────────────
+// MUST be before /:targetType/:targetId so 'user' isn't treated as a targetType
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const reviews = await Review.find({ userId: req.params.userId })
+      .sort({ createdAt: -1 });
+
+    // Populate hotel details for each hotel review
+    const Hotel = require('../models/Hotel');
+    const enriched = await Promise.all(reviews.map(async (r) => {
+      const obj = r.toObject();
+      if (r.targetType === 'hotel') {
+        try {
+          const hotel = await Hotel.findById(r.targetId).select('title images image location');
+          obj.hotelId = hotel || null;
+        } catch { obj.hotelId = null; }
+      }
+      return obj;
+    }));
+
+    res.json({ success: true, reviews: enriched });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error fetching reviews', error: err.message });
+  }
+});
+
 // ─── GET all reviews for a listing ────────────────────────────────────────────
 // GET /api/reviews/:targetType/:targetId
 router.get('/:targetType/:targetId', async (req, res) => {
   try {
     const { targetType, targetId } = req.params;
     const reviews = await Review.find({ targetId, targetType })
-      .populate('userId', 'firstName lastName')
+      .populate('userId', 'firstName lastName profilePhoto')
       .sort({ createdAt: -1 });
     res.json({ success: true, reviews });
   } catch (err) {
@@ -44,7 +70,7 @@ router.post('/', protect, async (req, res) => {
       comment: comment.trim(),
     });
 
-    const populated = await review.populate('userId', 'firstName lastName');
+    const populated = await review.populate('userId', 'firstName lastName profilePhoto');
     res.status(201).json({ success: true, review: populated });
   } catch (err) {
     if (err.code === 11000) {
@@ -67,17 +93,6 @@ router.delete('/:id', protect, async (req, res) => {
     res.json({ success: true, message: 'Review deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error deleting review', error: err.message });
-  }
-});
-
-// ─── Legacy: user's reviews (keep for profile page compatibility) ──────────────
-router.get('/user/:userId', async (req, res) => {
-  try {
-    const reviews = await Review.find({ userId: req.params.userId })
-      .sort({ createdAt: -1 });
-    res.json({ success: true, reviews });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Error fetching reviews', error: err.message });
   }
 });
 

@@ -3,13 +3,15 @@ import { useAuth } from '../../../context/AuthContext';
 
 const ProfileSidebar = ({ activeTab, setActiveTab }) => {
   const { user } = useAuth();
+
   const initial = user?.firstName
     ? user.firstName[0].toUpperCase()
     : user?.email
     ? user.email[0].toUpperCase()
     : '?';
+
   const tabs = [
-    { id: 'about', label: 'About me', icon: initial },
+    { id: 'about', label: 'About me', isAvatar: true },
     { id: 'trips', label: 'Past trips', icon: '💼' },
     { id: 'connections', label: 'Connections', icon: '👥' },
   ];
@@ -28,8 +30,18 @@ const ProfileSidebar = ({ activeTab, setActiveTab }) => {
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
             }`}
           >
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${activeTab === tab.id ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-gray-200 dark:bg-gray-700'}`}>
-              {tab.icon}
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs overflow-hidden ${activeTab === tab.id ? 'bg-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
+              {tab.isAvatar ? (
+                user?.profilePhoto ? (
+                  <img src={user.profilePhoto} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className={activeTab === tab.id ? 'text-white dark:text-black' : 'text-gray-700 dark:text-gray-300'}>
+                    {initial}
+                  </span>
+                )
+              ) : (
+                tab.icon
+              )}
             </div>
             {tab.label}
           </button>

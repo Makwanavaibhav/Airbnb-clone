@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { ChevronLeft, ChevronRight, Calendar, Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchHotelById } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSearch } from '../../context/SearchContext';
 import ReviewsList from '../ReviewsList';
 import WriteReview from '../WriteReview';
 
@@ -152,6 +153,7 @@ const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isLoggedIn, wishlistIds, toggleWishlist, user } = useAuth();
+  const { appliedSearch } = useSearch();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -160,8 +162,9 @@ const HotelDetails = () => {
   const reviewsRef = useRef(null);
   const [bookedDates, setBookedDates] = useState([]);
   
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  // Seed dates from search context if the user came from a search
+  const [startDate, setStartDate] = useState(appliedSearch?.startDate || null);
+  const [endDate, setEndDate] = useState(appliedSearch?.endDate || null);
   const [isReserving] = useState(false);
   const [bookingError, setBookingError] = useState(null);
   
@@ -172,8 +175,12 @@ const HotelDetails = () => {
   const [stayLength, setStayLength]         = useState("Weekend");
   const [flexibleMonths, setFlexibleMonths] = useState([]);
 
-  // New states for guest & scroll
-  const [guests, setGuests] = useState({ adults: 1, children: 0, infants: 0, pets: 0 });
+  // Seed guests from search context
+  const [guests, setGuests] = useState(
+    appliedSearch?.guests && (appliedSearch.guests.adults > 0)
+      ? appliedSearch.guests
+      : { adults: 1, children: 0, infants: 0, pets: 0 }
+  );
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [mapCenter, setMapCenter] = useState(null);
   const calendarRef = useRef(null);
@@ -181,7 +188,20 @@ const HotelDetails = () => {
 
   const totalGuests = guests.adults + guests.children;
 
-  const limits = { adults: 10, children: 5, infants: 5, pets: 5 };
+  // Derive the host-configured max from data.guests (may be a number string like "4" or "1-4 guests")
+  const maxGuestsFromListing = (() => {
+    if (!data) return 10;
+    const raw = data.guests;
+    if (typeof raw === 'number') return raw;
+    if (typeof raw === 'string') {
+      // e.g. "4" or "1-4 guests" — grab the last number
+      const nums = raw.match(/\d+/g);
+      if (nums) return parseInt(nums[nums.length - 1], 10);
+    }
+    return 10;
+  })();
+
+  const limits = { adults: maxGuestsFromListing, children: Math.max(0, maxGuestsFromListing - 1), infants: 5, pets: 5 };
   const incGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.min(limits[k], g[k] + 1) }));
   const decGuest = (k) => setGuests((g) => ({ ...g, [k]: Math.max(k === 'adults' ? 1 : 0, g[k] - 1) }));
 
@@ -470,7 +490,15 @@ const HotelDetails = () => {
                 </button>
               )}
             </div>
-            <img src={data.host?.image || "https://i.pravatar.cc/150?u=host"} alt={data.host?.name || "Host"} className="w-14 h-14 rounded-full object-cover" />
+            <img
+              src={data.host?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.host?.name || data.hostName || 'Host')}&background=random&size=112`}
+              alt={data.host?.name || "Host"}
+              className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.host?.name || data.hostName || 'H')}&background=222222&color=ffffff&size=112`;
+              }}
+            />
           </div>
 
           {/* Description */}
@@ -684,12 +712,12 @@ const HotelDetails = () => {
 
                   {showGuestDropdown && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl p-4 z-50">
-                      <GuestCounter label="Adults" sublabel="Age 13+" value={guests.adults} onInc={() => incGuest('adults')} onDec={() => decGuest('adults')} min={1} max={10} />
-                      <GuestCounter label="Children" sublabel="Ages 2-12" value={guests.children} onInc={() => incGuest('children')} onDec={() => decGuest('children')} max={5} />
+                      <GuestCounter label="Adults" sublabel="Age 13+" value={guests.adults} onInc={() => incGuest('adults')} onDec={() => decGuest('adults')} min={1} max={maxGuestsFromListing} />
+                      <GuestCounter label="Children" sublabel="Ages 2-12" value={guests.children} onInc={() => incGuest('children')} onDec={() => decGuest('children')} max={Math.max(0, maxGuestsFromListing - guests.adults)} />
                       <GuestCounter label="Infants" sublabel="Under 2" value={guests.infants} onInc={() => incGuest('infants')} onDec={() => decGuest('infants')} max={5} />
                       <GuestCounter label="Pets" sublabel="Bringing a service animal?" value={guests.pets} onInc={() => incGuest('pets')} onDec={() => decGuest('pets')} max={5} />
                       <div className="mt-4 text-xs font-light text-gray-500 text-center">
-                        This property allows a maximum of {data.guests} guests, not including infants.
+                        This property allows a maximum of <span className="font-semibold">{maxGuestsFromListing}</span> guests, not including infants.
                       </div>
                     </div>
                   )}

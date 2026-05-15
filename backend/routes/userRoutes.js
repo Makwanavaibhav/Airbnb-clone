@@ -92,7 +92,7 @@ router.delete('/wishlist/:hotelId', protect, async (req, res) => {
 // Update user profile
 router.patch('/profile', protect, async (req, res) => {
   try {
-    const allowedUpdates = ['firstName', 'lastName', 'phoneNumber', 'dateOfBirth', 'address'];
+    const allowedUpdates = ['firstName', 'lastName', 'phoneNumber', 'dateOfBirth', 'address', 'profilePhoto'];
     const updates = {};
 
     Object.keys(req.body).forEach(key => {
@@ -117,6 +117,32 @@ router.patch('/profile', protect, async (req, res) => {
       message: 'Error updating profile',
       error: error.message 
     });
+  }
+});
+
+// Upload / update profile photo (base64)
+router.patch('/photo', protect, async (req, res) => {
+  try {
+    const { profilePhoto } = req.body;
+    if (!profilePhoto) {
+      return res.status(400).json({ success: false, message: 'profilePhoto is required' });
+    }
+    // Validate it is a data URL for an image
+    if (!profilePhoto.startsWith('data:image/')) {
+      return res.status(400).json({ success: false, message: 'Invalid image format' });
+    }
+    // Rough size guard: base64 of 5MB ≈ ~6.8MB string length
+    if (profilePhoto.length > 7_000_000) {
+      return res.status(400).json({ success: false, message: 'Image too large (max 5MB)' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { profilePhoto },
+      { new: true }
+    ).select('-password');
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating photo', error: error.message });
   }
 });
 

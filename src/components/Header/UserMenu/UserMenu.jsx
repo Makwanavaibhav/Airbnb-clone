@@ -20,7 +20,9 @@ const AirbnbIcon = ({ className }) => (
 
 const UserMenu = ({ onOpenLanguageModal }) => {
   const navigate = useNavigate();
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, logout, user } = useAuth();
+
+  const userInitial = user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U';
 
   const handleLogout = () => {
     logout();
@@ -66,7 +68,13 @@ const UserMenu = ({ onOpenLanguageModal }) => {
               </DropdownMenuItem>
               <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/profile")}>
                 <div className="flex items-center gap-3">
-                  <UserIcon className="h-4 w-4" />
+                  <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
+                    {user?.profilePhoto ? (
+                      <img src={user.profilePhoto} alt="profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-white text-[10px] font-bold">{userInitial}</span>
+                    )}
+                  </div>
                   <span className="font-medium">Profile</span>
                 </div>
               </DropdownMenuItem>

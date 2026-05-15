@@ -75,9 +75,18 @@ function MobileHeader({
             {isLoggedIn ? (
               <div 
                 onClick={() => navigate('/profile')}
-                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
               >
-                {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'V'}
+                {user?.profilePhoto ? (
+                  <img
+                    src={user.profilePhoto}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
+                )}
               </div>
             ) : (
               <button 

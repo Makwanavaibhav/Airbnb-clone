@@ -29,6 +29,15 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(true);
   };
 
+  // Update user data globally — called after profile/photo save
+  const updateUser = (partialUpdate) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...partialUpdate };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -131,7 +140,7 @@ export const AuthProvider = ({ children }) => {
   }, [isLoggedIn]); // eslint-disable-line
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout, user, getToken, wishlistIds, toggleWishlist, fetchWishlistIds, loading }}>
+    <AuthContext.Provider value={{ isLoggedIn, login, logout, user, updateUser, getToken, wishlistIds, toggleWishlist, fetchWishlistIds, loading }}>
       {children}
     </AuthContext.Provider>
   );

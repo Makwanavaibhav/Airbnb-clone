@@ -126,7 +126,7 @@ router.get("/cities", async (req, res) => {
 // GET /api/hotels/search — Advanced Search endpoint (published only)
 router.get("/search", async (req, res) => {
   try {
-    const { city, minPrice, maxPrice, propertyType } = req.query;
+    const { city, minPrice, maxPrice, propertyType, guests } = req.query;
     // Always restrict public search to published listings only
     let filter = { status: "published" };
 
@@ -143,9 +143,27 @@ router.get("/search", async (req, res) => {
     if (propertyType) {
       filter.propertyType = propertyType;
     }
-    
+
     const hotels = await Hotel.find(filter);
-    res.json(hotels);
+
+    // Filter by guest capacity after fetch (guests field can be a number or a string)
+    let results = hotels;
+    if (guests) {
+      const requested = parseInt(guests, 10);
+      if (!isNaN(requested) && requested > 0) {
+        results = hotels.filter(h => {
+          const raw = h.guests;
+          if (typeof raw === 'number') return raw >= requested;
+          if (typeof raw === 'string') {
+            const nums = raw.match(/\d+/g);
+            if (nums) return parseInt(nums[nums.length - 1], 10) >= requested;
+          }
+          return true; // if field absent, include listing
+        });
+      }
+    }
+
+    res.json(results);
   } catch (err) {
     console.error("GET /api/hotels/search error:", err);
     res.status(500).json({ error: "Failed to search hotels" });

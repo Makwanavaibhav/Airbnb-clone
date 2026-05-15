@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   phoneNumber: { type: String },
   dateOfBirth: { type: Date },
   address: { type: String },
+  profilePhoto: { type: String, default: null },
   isHost: { type: Boolean, default: false },
   wishlist: [{ 
     type: mongoose.Schema.Types.ObjectId, 

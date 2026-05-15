@@ -93,7 +93,18 @@ const ReviewsList = forwardRef(function ReviewsList({ targetId, targetType }, re
               <div key={review._id} className="flex flex-col">
                 {/* Author row */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 flex items-center justify-center flex-shrink-0">
+                  {review.userId?.profilePhoto ? (
+                    <img
+                      src={review.userId.profilePhoto}
+                      alt={firstName}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling?.style.removeProperty('display'); }}
+                    />
+                  ) : null}
+                  <div
+                    className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 flex items-center justify-center flex-shrink-0"
+                    style={{ display: review.userId?.profilePhoto ? 'none' : 'flex' }}
+                  >
                     <span className="text-white dark:text-gray-900 font-semibold text-sm">{initial}</span>
                   </div>
                   <div>
