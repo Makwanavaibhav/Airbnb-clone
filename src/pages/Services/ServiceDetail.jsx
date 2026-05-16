@@ -18,8 +18,6 @@ const ServiceDetail = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [booking, setBooking] = useState(false);
   const [dateError, setDateError] = useState(null);
-  const [clientSecret, setClientSecret] = useState(null);
-  const [priceSummary, setPriceSummary] = useState(null);
   const [toast, setToast] = useState(null);
   const [availableDates, setAvailableDates] = useState([]);
 
@@ -92,34 +90,12 @@ const ServiceDetail = () => {
         return;
       }
       
-      setClientSecret(data.clientSecret);
-      setPriceSummary({ total: data.total, basePrice: data.basePrice, serviceFee: data.serviceFee });
-    } catch (err) {
-      setDateError('Failed to connect to payment server. Please try again.');
-    } finally {
-      setBooking(false);
-    }
-  };
-
-  const handlePaymentSuccess = async (paymentIntentId) => {
-    try {
-      const res = await fetch('http://localhost:5001/api/payments/confirm-booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ paymentIntentId, bookingType: 'service' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setToast({ type: 'success', msg: 'Service booked! 🎉' });
-        setTimeout(() => navigate('/trips'), 1500);
-      } else {
-        setDateError(data.message || "Failed to confirm booking.");
+      if (data.url) {
+        window.location.href = data.url;
       }
     } catch (err) {
-      setDateError("Network error while confirming booking.");
+      setDateError('Failed to connect to payment server. Please try again.');
+      setBooking(false);
     }
   };
 
@@ -282,7 +258,7 @@ const ServiceDetail = () => {
                             ? 'border-purple-600 dark:border-purple-400 border-2 bg-purple-50 dark:bg-purple-900/20'
                             : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-400'
                         }`}
-                        disabled={clientSecret != null}
+                        disabled={booking}
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -307,52 +283,21 @@ const ServiceDetail = () => {
                   value={selectedDate ? new Date(selectedDate.date).toISOString().split('T')[0] : ''}
                   onChange={e => setSelectedDate({ date: e.target.value, timeRange: '10:00 AM - 1:00 PM', spotsAvailable: 10 })}
                   className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
-                  disabled={clientSecret != null}
+                  disabled={booking}
                 />
               </div>
             )}
             
             {dateError && <p className="text-red-500 font-semibold text-sm mb-4">{dateError}</p>}
 
-            {/* Checkout State Switch */}
-            {clientSecret && priceSummary ? (
-              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h4 className="text-lg font-bold mb-3 dark:text-white">Payment</h4>
-                <div className="mb-4 text-sm dark:text-gray-300 space-y-2">
-                  <div className="flex justify-between">
-                    <span>Base Price</span>
-                    <span>₹{priceSummary.basePrice.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Service Fee</span>
-                    <span>₹{priceSummary.serviceFee.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-                <StripeCheckout 
-                  clientSecret={clientSecret} 
-                  total={priceSummary.total} 
-                  onSuccess={handlePaymentSuccess} 
-                  onError={(err) => setDateError(`Card Error: ${err}`)}
-                />
-                <button
-                  onClick={() => {setClientSecret(null); setPriceSummary(null); setDateError(null);}}
-                  className="w-full mt-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 rounded-xl transition"
-                >
-                  Edit details
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={handleBook}
-                  disabled={booking}
-                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition mt-2"
-                >
-                  {booking ? 'Processing...' : 'Book Now'}
-                </button>
-                <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
-              </>
-            )}
+            <button
+              onClick={handleBook}
+              disabled={booking}
+              className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition mt-2"
+            >
+              {booking ? 'Processing...' : 'Book Now'}
+            </button>
+            <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
           </div>
         </div>
       </div>

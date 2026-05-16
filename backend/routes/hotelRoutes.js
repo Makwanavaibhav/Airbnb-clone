@@ -219,7 +219,7 @@ router.patch("/:id/status", authenticateToken, async (req, res) => {
     const hotel = await Hotel.findOneAndUpdate(
       { _id: req.params.id, hostId: req.user._id },
       { $set: { status } },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!hotel) return res.status(404).json({ error: "Listing not found or unauthorized" });
@@ -241,13 +241,13 @@ router.put("/:id", authenticateToken, async (req, res) => {
       hotel = await Hotel.findOneAndUpdate(
         { _id: id, hostId: hostId },
         { $set: req.body },
-        { new: true }
+        { returnDocument: 'after' }
       );
     } else {
       hotel = await Hotel.findOneAndUpdate(
         { id: parseInt(id), hostId: hostId },
         { $set: req.body },
-        { new: true }
+        { returnDocument: 'after' }
       );
     }
 

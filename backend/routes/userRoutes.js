@@ -104,7 +104,7 @@ router.patch('/profile', protect, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       updates,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).select('-password');
 
     res.json({ 
@@ -138,7 +138,7 @@ router.patch('/photo', protect, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { profilePhoto },
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-password');
     res.json({ success: true, user });
   } catch (error) {
@@ -199,7 +199,7 @@ router.patch('/preferences', protect, async (req, res) => {
           timezone: timezone || existingUser.preferences?.timezone
         }
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-password');
 
     res.json({ 

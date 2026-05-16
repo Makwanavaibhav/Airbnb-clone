@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../../../context/AuthContext';
 
 const PersonalInfo = () => {
+  const { getToken, updateUser } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -11,11 +13,12 @@ const PersonalInfo = () => {
     address: ''
   });
   const [editing, setEditing] = useState(null);
+  const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = getToken();
         const res = await axios.get('http://localhost:5001/api/users/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -49,27 +52,36 @@ const PersonalInfo = () => {
 
   const handleSave = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const res = await axios.patch('http://localhost:5001/api/users/profile', 
         { ...formData },
         { headers: { Authorization: `Bearer ${token}` }}
       );
       if (res.data.success) {
         const updatedUser = res.data.user;
-        localStorage.setItem('user', JSON.stringify(updatedUser)); // Update local state so it persists
+        // Sync AuthContext so navbar & profile photo update instantly
+        updateUser(updatedUser);
       }
       setEditing(null);
-      alert('Updated successfully');
+      setSaveMsg('Saved successfully!');
+      setTimeout(() => setSaveMsg(''), 3000);
     } catch (error) {
       console.error(error);
-      alert('Update failed');
+      setSaveMsg('Update failed. Please try again.');
+      setTimeout(() => setSaveMsg(''), 3000);
     }
   };
 
   return (
     <div className="max-w-2xl">
       <h2 className="text-2xl font-semibold mb-6">Personal info</h2>
-      
+      {saveMsg && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+          saveMsg.includes('failed') 
+            ? 'bg-red-50 text-red-700 border border-red-200' 
+            : 'bg-green-50 text-green-700 border border-green-200'
+        }`}>{saveMsg}</div>
+      )}
       {/* Legal name */}
       <div className="py-6 border-b border-gray-200">
         <div className="flex justify-between items-start">

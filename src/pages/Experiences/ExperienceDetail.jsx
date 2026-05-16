@@ -20,8 +20,6 @@ const ExperienceDetail = () => {
   const [guests, setGuests] = useState(1);
   const [booking, setBooking] = useState(false);
   const [dateError, setDateError] = useState(null);
-  const [clientSecret, setClientSecret] = useState(null);
-  const [priceSummary, setPriceSummary] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -39,12 +37,13 @@ const ExperienceDetail = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const validateDates = (checkIn, checkOut, guestsCount) => {
+  const validateDates = (selectedSlot) => {
+    if (!selectedSlot) return "Please select a date and time slot";
+    const d = new Date(selectedSlot.date);
+    if (isNaN(d.getTime())) return "Invalid date selected";
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    if (!checkIn) return "Please select a date and time slot";
-
+    if (d < today) return "Selected date cannot be in the past";
     return null;
   };
 
@@ -52,12 +51,18 @@ const ExperienceDetail = () => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
 
-    const errorMsg = validateDates(checkInDate, checkOutDate, guests);
+    const errorMsg = validateDates(selectedDate);
     if (errorMsg) {
       setDateError(errorMsg);
       return;
     }
     setDateError(null);
+
+    // checkIn = selected date; checkOut = next day (backend requires checkOut > checkIn)
+    const checkIn = new Date(selectedDate.date);
+    checkIn.setHours(10, 0, 0, 0);
+    const checkOut = new Date(checkIn);
+    checkOut.setDate(checkOut.getDate() + 1);
 
     try {
       setBooking(true);
@@ -67,7 +72,12 @@ const ExperienceDetail = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ experienceId: id, checkIn: selectedDate?.date, checkOut: selectedDate?.date, guests })
+        body: JSON.stringify({
+          experienceId: id,
+          checkIn: checkIn.toISOString(),
+          checkOut: checkOut.toISOString(),
+          guests
+        })
       });
       const data = await res.json();
 
@@ -75,35 +85,13 @@ const ExperienceDetail = () => {
         setDateError(data.message || 'Payment initiation failed');
         return;
       }
-      
-      setClientSecret(data.clientSecret);
-      setPriceSummary({ total: data.total, subtotal: data.subtotal, serviceFee: data.serviceFee, nights: data.nights });
-    } catch (err) {
-      setDateError('Failed to connect to payment server. Please try again.');
-    } finally {
-      setBooking(false);
-    }
-  };
 
-  const handlePaymentSuccess = async (paymentIntentId) => {
-    try {
-      const res = await fetch('http://localhost:5001/api/payments/confirm-booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ paymentIntentId, bookingType: 'experience' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setToast({ type: 'success', msg: 'Booking confirmed! 🎉' });
-        setTimeout(() => navigate('/trips'), 1500);
-      } else {
-        setDateError(data.message || "Failed to confirm booking.");
+      if (data.url) {
+        window.location.href = data.url;
       }
     } catch (err) {
-      setDateError("Network error while confirming booking.");
+      setDateError('Failed to connect to payment server. Please try again.');
+      setBooking(false);
     }
   };
 
@@ -139,11 +127,15 @@ const ExperienceDetail = () => {
         </div>
       )}
 
+      {/* Nav bar — back button visible on all screens */}
       <div className="w-full max-w-[1120px] mx-auto md:px-6 md:mt-8 mb-6 flex justify-between items-center px-4 pt-4 md:pt-0">
-        <div className="md:hidden cursor-pointer" onClick={() => navigate(-1)}>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg transition dark:text-white"
+        >
           <ChevronLeft size={24} className="dark:text-white" />
-        </div>
-        <div className="hidden md:block" />
+          <span className="hidden md:inline text-sm font-semibold">Back</span>
+        </button>
         <div className="flex gap-4">
           <button className="flex items-center gap-2 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg transition dark:text-white">
             <Share size={18} /> <span className="hidden md:inline">Share</span>
@@ -274,7 +266,7 @@ const ExperienceDetail = () => {
                             ? 'border-black dark:border-white border-2 bg-gray-50 dark:bg-gray-800'
                             : 'border-gray-300 dark:border-gray-700 hover:border-gray-400'
                         }`}
-                        disabled={clientSecret != null}
+                        disabled={booking}
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -299,7 +291,7 @@ const ExperienceDetail = () => {
                   value={selectedDate ? new Date(selectedDate.date).toISOString().split('T')[0] : ''}
                   onChange={e => setSelectedDate({ date: e.target.value, timeRange: '10:00 AM - 1:00 PM', spotsAvailable: 10 })}
                   className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400"
-                  disabled={clientSecret != null}
+                  disabled={booking}
                 />
               </div>
             )}
@@ -316,54 +308,23 @@ const ExperienceDetail = () => {
                 <div className="flex items-center gap-3">
                   <button onClick={() => setGuests(g => Math.max(1, g - 1))}
                     className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center dark:text-white disabled:opacity-30"
-                    disabled={guests <= 1 || clientSecret != null}>-</button>
+                    disabled={guests <= 1 || booking}>-</button>
                   <span className="font-semibold dark:text-white w-4 text-center">{guests}</span>
                   <button onClick={() => setGuests(g => Math.min(experience.groupSize || 10, g + 1))}
                     className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center dark:text-white disabled:opacity-30"
-                    disabled={clientSecret != null}>+</button>
+                    disabled={booking}>+</button>
                 </div>
               </div>
             </div>
 
-            {/* Checkout State Switch */}
-            {clientSecret && priceSummary ? (
-              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h4 className="text-lg font-bold mb-3 dark:text-white">Payment</h4>
-                <div className="mb-4 text-sm dark:text-gray-300 space-y-2">
-                  <div className="flex justify-between">
-                    <span>₹{experience.pricePerPerson?.toLocaleString('en-IN')} × {guests} guest{guests > 1 ? 's ' : ' '}</span>
-                    <span>₹{priceSummary.subtotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Service Fee</span>
-                    <span>₹{priceSummary.serviceFee.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-                <StripeCheckout 
-                  clientSecret={clientSecret} 
-                  total={priceSummary.total} 
-                  onSuccess={handlePaymentSuccess} 
-                  onError={(err) => setDateError(`Card Error: ${err}`)}
-                />
-                <button
-                  onClick={() => {setClientSecret(null); setPriceSummary(null); setDateError(null);}}
-                  className="w-full mt-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 rounded-xl transition"
-                >
-                  Edit details
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={handleBook}
-                  disabled={booking}
-                  className="w-full bg-[#FF385C] hover:bg-[#D90B38] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition mt-2"
-                >
-                  {booking ? 'Processing...' : 'Reserve'}
-                </button>
-                <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
-              </>
-            )}
+            <button
+              onClick={handleBook}
+              disabled={booking}
+              className="w-full bg-[#FF385C] hover:bg-[#D90B38] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition mt-2"
+            >
+              {booking ? 'Processing...' : 'Reserve'}
+            </button>
+            <p className="text-center text-gray-400 text-xs mt-3">You won't be charged yet</p>
           </div>
         </div>
       </div>

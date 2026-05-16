@@ -128,7 +128,7 @@ function TripCard({ trip, onCancel, onDelete }) {
             >
               View Details
             </button>
-            {/* Hotel-only actions */}
+            {/* Message Host — hotel bookings only */}
             {trip.bookingType === 'hotel' && trip.status === 'confirmed' && trip.hotelId?.hostId && (
               <button
                 onClick={() => navigate(`/messages?hostId=${trip.hotelId.hostId}`)}
@@ -137,7 +137,8 @@ function TripCard({ trip, onCancel, onDelete }) {
                 Message Host
               </button>
             )}
-            {trip.bookingType === 'hotel' && trip.status === 'confirmed' && new Date(trip.checkInDate) > new Date() && (
+            {/* Cancel: works for all booking types before start date */}
+            {trip.status === 'confirmed' && new Date(trip.startDate || trip.checkInDate || trip.sessionDate) > new Date() && (
               <button
                 onClick={() => onCancel(trip._id)}
                 className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors"
@@ -218,8 +219,10 @@ const Trips = () => {
   // Filter trips by tab
   const filterTrips = () => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     return trips.filter(trip => {
       const start = new Date(trip.startDate || trip.checkInDate || trip.sessionDate || Date.now());
+      start.setHours(0, 0, 0, 0);
       switch (activeTab) {
         case 'upcoming':  return start >= now && trip.status !== 'cancelled';
         case 'past':      return start < now  && trip.status !== 'cancelled';

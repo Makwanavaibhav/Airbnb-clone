@@ -65,25 +65,37 @@ router.post('/experience/create-intent', protect, async (req, res) => {
     const serviceFee = Math.round(subtotal * 0.12);
     const total = subtotal + serviceFee;
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: total * 100, // Stripe uses paise/cents
-      currency: 'inr',
+    const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'inr',
+          product_data: {
+            name: exp.title || 'Experience',
+            description: `Check-in: ${inDate.toISOString().split('T')[0]}`,
+          },
+          unit_amount: Math.round(total * 100),
+        },
+        quantity: 1,
+      }],
       metadata: {
+        bookingType: 'experience',
         experienceId: experienceId.toString(),
         userId: req.user.id.toString(),
         checkIn: inDate.toISOString(),
         checkOut: outDate.toISOString(),
         guests: numGuests.toString()
-      }
+      },
+      success_url: `${clientOrigin}/booking-success?session_id={CHECKOUT_SESSION_ID}&type=experience`,
+      cancel_url: `${clientOrigin}/experience/${experienceId}`,
     });
 
     res.json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
-      total,
-      subtotal,
-      serviceFee,
-      nights
+      url: session.url
     });
   } catch (error) {
     console.error('Experience Intent Error:', error);
@@ -137,22 +149,35 @@ router.post('/service/create-intent', protect, async (req, res) => {
     const serviceFee = Math.round(svc.pricePerSession * 0.12);
     const total = svc.pricePerSession + serviceFee;
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: total * 100, // Stripe uses paise/cents
-      currency: 'inr',
+    const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'inr',
+          product_data: {
+            name: svc.title || 'Service',
+            description: `Session Date: ${sDate.toISOString().split('T')[0]}`,
+          },
+          unit_amount: Math.round(total * 100),
+        },
+        quantity: 1,
+      }],
       metadata: {
+        bookingType: 'service',
         serviceId: serviceId.toString(),
         userId: req.user.id.toString(),
         sessionDate: sDate.toISOString()
-      }
+      },
+      success_url: `${clientOrigin}/booking-success?session_id={CHECKOUT_SESSION_ID}&type=service`,
+      cancel_url: `${clientOrigin}/service/${serviceId}`,
     });
 
     res.json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
-      total,
-      basePrice: svc.pricePerSession,
-      serviceFee
+      url: session.url
     });
   } catch (error) {
     console.error('Service Intent Error:', error);
@@ -161,30 +186,30 @@ router.post('/service/create-intent', protect, async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────────
-// ROUTE 3: Confirm Booking
+// ROUTE 3: Verify Session
 // ──────────────────────────────────────────────────────────────────
-router.post('/confirm-booking', protect, async (req, res) => {
+router.post('/verify-session', protect, async (req, res) => {
   try {
-    const { paymentIntentId, bookingType } = req.body;
+    const { paymentIntentId: sessionId, type } = req.body;
 
-    if (!paymentIntentId || !bookingType) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!sessionId || !type) {
+      return res.status(400).json({ success: false, message: 'Missing sessionId or type' });
     }
 
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    if (intent.status !== 'succeeded') {
+    if (session.payment_status !== 'paid') {
       return res.status(400).json({ success: false, message: 'Payment not completed' });
     }
 
     let newBooking;
 
-    if (bookingType === 'experience') {
-      const exists = await ExperienceBooking.findOne({ paymentIntentId });
-      if (exists) return res.status(409).json({ success: false, message: 'Booking already confirmed' });
+    if (type === 'experience') {
+      const exists = await ExperienceBooking.findOne({ paymentIntentId: session.id });
+      if (exists) return res.json({ success: true, booking: exists });
 
       // Create new booking from metadata
-      const { experienceId, checkIn, checkOut, guests } = intent.metadata;
+      const { experienceId, checkIn, checkOut, guests } = session.metadata;
       
       const exp = await Experience.findById(experienceId);
       if (!exp) return res.status(404).json({ success: false, message: 'Experience not found' });
@@ -196,16 +221,18 @@ router.post('/confirm-booking', protect, async (req, res) => {
         checkIn: new Date(checkIn),
         checkOut: new Date(checkOut),
         guests: Number(guests),
-        totalPrice: intent.amount / 100,
+        totalPrice: session.amount_total / 100,
         status: 'confirmed',
-        paymentIntentId
+        paymentIntentId: session.id
       });
-    } else if (bookingType === 'service') {
-      const exists = await ServiceBooking.findOne({ paymentIntentId });
-      if (exists) return res.status(409).json({ success: false, message: 'Booking already confirmed' });
+      await newBooking.populate('experienceId', 'title location images');
+
+    } else if (type === 'service') {
+      const exists = await ServiceBooking.findOne({ paymentIntentId: session.id });
+      if (exists) return res.json({ success: true, booking: exists });
 
       // Create new booking from metadata
-      const { serviceId, sessionDate } = intent.metadata;
+      const { serviceId, sessionDate } = session.metadata;
 
       const svc = await Service.findById(serviceId);
       if (!svc) return res.status(404).json({ success: false, message: 'Service not found' });
@@ -215,18 +242,20 @@ router.post('/confirm-booking', protect, async (req, res) => {
         serviceId,
         hostId: svc.hostId,
         sessionDate: new Date(sessionDate),
-        totalPrice: intent.amount / 100,
+        totalPrice: session.amount_total / 100,
         status: 'confirmed',
-        paymentIntentId
+        paymentIntentId: session.id
       });
+      await newBooking.populate('serviceId', 'title location images');
+
     } else {
       return res.status(400).json({ success: false, message: 'Invalid booking type' });
     }
 
-    res.json({ success: true, bookingId: newBooking._id });
+    res.json({ success: true, booking: newBooking });
   } catch (error) {
-    console.error('Confirm Booking Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to confirm booking', error: error.message });
+    console.error('Verify Session Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify session', error: error.message });
   }
 });
 

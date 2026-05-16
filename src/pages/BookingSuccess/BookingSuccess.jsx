@@ -7,20 +7,22 @@ const BookingSuccess = () => {
   const navigate = useNavigate();
   const bookingId = searchParams.get('bookingId');
   const sessionId = searchParams.get('session_id');
+  const type = searchParams.get('type') || 'hotel';
 
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'error'
   const [booking, setBooking] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (!bookingId || !sessionId) {
+    if (!sessionId || (type === 'hotel' && !bookingId)) {
       setStatus('error');
       setErrorMsg('Missing booking information. Please contact support.');
       return;
     }
 
     // Bug #9 fix: skip re-calling Stripe if we already confirmed this booking in this browser session
-    const cached = sessionStorage.getItem(`booking_confirmed_${bookingId}`);
+    const cacheKey = `booking_confirmed_${bookingId || sessionId}`;
+    const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
       try {
         setBooking(JSON.parse(cached));
@@ -31,19 +33,24 @@ const BookingSuccess = () => {
 
     const confirm = async () => {
       try {
-        const res = await fetch('http://localhost:5001/api/bookings/verify-payment', {
+        const endpoint = type === 'hotel' 
+          ? 'http://localhost:5001/api/bookings/verify-payment'
+          : 'http://localhost:5001/api/payments/verify-session';
+          
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
-          body: JSON.stringify({ paymentIntentId: sessionId, bookingId }),
+          body: JSON.stringify({ paymentIntentId: sessionId, bookingId, type }),
         });
         const data = await res.json();
 
         if (data.success) {
           // Cache so reloads don't re-call Stripe
-          sessionStorage.setItem(`booking_confirmed_${bookingId}`, JSON.stringify(data.booking));
+          const cacheKey = `booking_confirmed_${bookingId || sessionId}`;
+          sessionStorage.setItem(cacheKey, JSON.stringify(data.booking));
           setBooking(data.booking);
           setStatus('success');
         } else {
@@ -84,9 +91,13 @@ const BookingSuccess = () => {
     );
   }
 
-  const hotel = booking?.hotelId;
-  const checkIn  = booking?.checkInDate  ? new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const checkOut = booking?.checkOutDate ? new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const item = booking?.hotelId || booking?.experienceId || booking?.serviceId;
+  const checkIn  = booking?.checkInDate || booking?.checkIn || booking?.sessionDate 
+    ? new Date(booking.checkInDate || booking.checkIn || booking.sessionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) 
+    : '';
+  const checkOut = booking?.checkOutDate || booking?.checkOut 
+    ? new Date(booking.checkOutDate || booking.checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) 
+    : '';
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 py-16">
@@ -106,13 +117,13 @@ const BookingSuccess = () => {
           Your stay has been successfully booked. Have a great trip!
         </p>
 
-        {hotel && (
+        {item && (
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 text-left mb-8 space-y-3">
             <div className="font-semibold text-gray-900 dark:text-white text-[16px]">
-              {hotel.title || 'Your stay'}
+              {item.title || 'Your stay'}
             </div>
-            {hotel.location && (
-              <div className="text-sm text-gray-500">{hotel.location}</div>
+            {item.location && (
+              <div className="text-sm text-gray-500">{item.location}</div>
             )}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 grid grid-cols-2 gap-2 text-sm">
               <div>
