@@ -7,7 +7,7 @@ import {
   CheckCircle2, XCircle, FileText, ExternalLink, User, Star, Clock
 } from "lucide-react";
 
-const API = "http://localhost:5001";
+const API = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`;
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {

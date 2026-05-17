@@ -43,7 +43,7 @@ const Checkout = () => {
     setIsPaying(true);
     setPaymentError(null);
     try {
-      const response = await fetch('http://localhost:5001/api/bookings/checkout', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bookings/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

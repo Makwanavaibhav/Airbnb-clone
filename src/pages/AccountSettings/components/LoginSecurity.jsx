@@ -18,7 +18,7 @@ const LoginSecurity = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5001/api/users/change-password', passwordData, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/change-password`, passwordData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Password changed successfully');

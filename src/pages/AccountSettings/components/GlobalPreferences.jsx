@@ -11,7 +11,7 @@ const GlobalPreferences = () => {
   const handleUpdate = async (field, value) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch('http://localhost:5001/api/users/preferences', 
+      await axios.patch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/preferences`, 
         { [field]: value },
         { headers: { Authorization: `Bearer ${token}` }}
       );

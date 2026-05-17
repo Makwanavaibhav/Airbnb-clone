@@ -19,7 +19,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, "http://localhost:5173"] : "*",
     methods: ["GET", "POST"]
   }
 });
@@ -40,7 +40,7 @@ io.use((socket, next) => {
 const PORT = process.env.PORT || 5001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ origin: "http://localhost:5173" })); // Vite dev server
+app.use(cors({ origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, "http://localhost:5173"] : "*" }));
 app.use(express.json());
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────────

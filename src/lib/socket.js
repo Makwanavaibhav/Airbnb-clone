@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const URL = 'http://localhost:5001';
+const URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
  * Socket instance with autoConnect=false so we can attach the JWT token

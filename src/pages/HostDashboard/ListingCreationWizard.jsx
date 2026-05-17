@@ -250,7 +250,7 @@ function ListingCreationWizard({ onClose, draftData }) {
       data.append("hostName", "Host");
       formData.images.forEach(img => data.append("images", img));
 
-      const response = await fetch("http://localhost:5001/api/hotels", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/hotels`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: data,

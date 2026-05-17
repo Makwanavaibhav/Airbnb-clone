@@ -19,7 +19,7 @@ const PersonalInfo = () => {
     const fetchProfile = async () => {
       try {
         const token = getToken();
-        const res = await axios.get('http://localhost:5001/api/users/me', {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success && res.data.user) {
@@ -53,7 +53,7 @@ const PersonalInfo = () => {
   const handleSave = async () => {
     try {
       const token = getToken();
-      const res = await axios.patch('http://localhost:5001/api/users/profile', 
+      const res = await axios.patch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/profile`, 
         { ...formData },
         { headers: { Authorization: `Bearer ${token}` }}
       );

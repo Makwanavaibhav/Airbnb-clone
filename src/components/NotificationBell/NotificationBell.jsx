@@ -3,7 +3,7 @@ import { Bell, CheckCheck, Star, XCircle, FileText, MessageSquare } from "lucide
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext.jsx";
 
-const API = "http://localhost:5001";
+const API = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`;
 
 const ICON_MAP = {
   listing_approved: { icon: Star, bg: "bg-green-100", color: "text-green-600" },

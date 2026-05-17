@@ -28,7 +28,7 @@ const ExperienceDetail = () => {
     window.scrollTo(0, 0);
     setLoading(true);
 
-    fetch(`http://localhost:5001/api/experiences/${id}`)
+    fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/experiences/${id}`)
       .then(res => res.json())
       .then(data => {
         if (data && data._id) {
@@ -155,7 +155,7 @@ const ExperienceDetail = () => {
 
     try {
       setBooking(true);
-      const res = await fetch('http://localhost:5001/api/payments/experience/create-intent', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/payments/experience/create-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -202,7 +202,7 @@ const Trips = () => {
       const token = localStorage.getItem('token');
       if (!token) { navigate('/login'); return; }
 
-      const res = await axios.get('http://localhost:5001/api/bookings/my-trips', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bookings/my-trips`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTrips(res.data.trips || []);
@@ -239,7 +239,7 @@ const Trips = () => {
   const confirmCancel = async () => {
     if (!cancelId) return;
     try {
-      await axios.post(`http://localhost:5001/api/bookings/${cancelId}/cancel`, {}, {
+      await axios.post(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/bookings/${cancelId}/cancel`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       await fetchTrips();
@@ -253,7 +253,7 @@ const Trips = () => {
   const handleDeleteBooking = async (id) => {
     if (!window.confirm('Delete this pending booking permanently?')) return;
     try {
-      await axios.delete(`http://localhost:5001/api/bookings/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/bookings/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       await fetchTrips();

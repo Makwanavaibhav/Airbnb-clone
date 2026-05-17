@@ -31,7 +31,7 @@ export default function Services() {
     setLoading(true);
     setError(null);
 
-    fetch(`http://localhost:5001/api/services`)
+    fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/services`)
       .then(res => res.json())
       .then(data => {
         if (!cancelled) {

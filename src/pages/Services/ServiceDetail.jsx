@@ -84,7 +84,7 @@ const ServiceDetail = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     setLoading(true);
-    fetch(`http://localhost:5001/api/services/${id}`)
+    fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/services/${id}`)
       .then(res => res.json())
       .then(data => { if (data && data._id) setService(data); })
       .catch(console.error)
@@ -127,7 +127,7 @@ const ServiceDetail = () => {
 
     try {
       setBooking(true);
-      const res = await fetch('http://localhost:5001/api/payments/service/create-intent', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/payments/service/create-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

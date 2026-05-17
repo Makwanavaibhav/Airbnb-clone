@@ -1,5 +1,5 @@
 // ─── Base URL — reads from Vite env, falls back to localhost dev server ───────
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const BASE = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`;
 
 /**
  * Fetch ALL hotels from the backend.

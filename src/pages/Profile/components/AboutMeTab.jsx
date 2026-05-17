@@ -40,7 +40,7 @@ const AboutMeTab = () => {
     const fetchReviews = async () => {
       if (!user?._id) return;
       try {
-        const res = await axios.get(`http://localhost:5001/api/reviews/user/${user._id}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/reviews/user/${user._id}`);
         setReviews(res.data.reviews || []);
       } catch (error) {
         console.error('Error fetching reviews:', error);
@@ -79,7 +79,7 @@ const AboutMeTab = () => {
       setUploadingPhoto(true);
       try {
         const res = await axios.patch(
-          'http://localhost:5001/api/users/photo',
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/photo`,
           { profilePhoto: base64 },
           { headers: { Authorization: `Bearer ${getToken()}` } }
         );

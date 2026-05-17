@@ -34,8 +34,8 @@ const BookingSuccess = () => {
     const confirm = async () => {
       try {
         const endpoint = type === 'hotel' 
-          ? 'http://localhost:5001/api/bookings/verify-payment'
-          : 'http://localhost:5001/api/payments/verify-session';
+          ? `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bookings/verify-payment`
+          : `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/payments/verify-session`;
           
         const res = await fetch(endpoint, {
           method: 'POST',

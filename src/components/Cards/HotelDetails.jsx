@@ -243,7 +243,7 @@ const HotelDetails = () => {
       });
 
     // Fetch booked dates
-    fetch(`http://localhost:5001/api/bookings/hotel/${id}/dates`)
+    fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/bookings/hotel/${id}/dates`)
       .then(res => res.json())
       .then(data => {
         if (!cancelled && data.success) {

@@ -16,7 +16,7 @@ const ReviewsList = forwardRef(function ReviewsList({ targetId, targetType }, re
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:5001/api/reviews/${targetType}/${targetId}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/reviews/${targetType}/${targetId}`);
       const data = await res.json();
       setReviews(data.reviews || []);
     } catch (err) {

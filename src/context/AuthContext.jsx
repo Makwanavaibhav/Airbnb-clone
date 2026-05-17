@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     const token = getToken();
     if (!token) return;
     try {
-      const res = await axios.get("http://localhost:5001/api/users/wishlist", {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/wishlist`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const items = res.data.wishlist || [];
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     const token = getToken();
     if (!token) return;
     try {
-      const res = await axios.get("http://localhost:5001/api/users/me", {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const profile = res.data.user || res.data;
@@ -93,12 +93,12 @@ export const AuthProvider = ({ children }) => {
     });
     try {
       if (isLiked) {
-        await axios.delete(`http://localhost:5001/api/users/wishlist/${idStr}`, {
+        await axios.delete(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/users/wishlist/${idStr}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         return false;
       } else {
-        await axios.post("http://localhost:5001/api/users/wishlist",
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/wishlist`,
           { hotelId: idStr },
           { headers: { Authorization: `Bearer ${token}` } }
         );

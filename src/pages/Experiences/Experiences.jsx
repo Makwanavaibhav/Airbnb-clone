@@ -29,7 +29,7 @@ export default function Experiences() {
     setLoading(true);
     setError(null);
 
-    fetch(`http://localhost:5001/api/experiences`)
+    fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/experiences`)
       .then(res => res.json())
       .then(data => {
         if (!cancelled) {

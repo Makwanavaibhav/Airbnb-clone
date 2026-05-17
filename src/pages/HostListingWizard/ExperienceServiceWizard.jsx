@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { X, ChevronLeft, ChevronRight, Upload, Star, CheckCircle2, AlertCircle } from "lucide-react";
 import LongLogo from "../../assets/logo/long-logo.png";
 
-const API = "http://localhost:5001";
+const API = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`;
 
 const EXPERIENCE_CATEGORIES = ["Adventure","Arts & Crafts","Cooking & Food","Culture","Dance","Fitness","History","Music","Nature","Photography","Sports","Wellness"];
 const SERVICE_CATEGORIES = ["Personal Training","Yoga & Meditation","Photography","Music Lessons","Language Tutoring","Cooking Classes","Beauty & Grooming","Home Services","Pet Care","Tech Support","Consulting","Other"];

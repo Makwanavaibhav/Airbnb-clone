@@ -86,7 +86,7 @@ function SearchSection({ searchContext, searchDest }) {
     const totalGuests = (searchContext?.guests?.adults || 0) + (searchContext?.guests?.children || 0);
     if (totalGuests > 0) params.append('guests', totalGuests);
 
-    fetch(`http://localhost:5001/api/hotels/search?${params.toString()}`)
+    fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/hotels/search?${params.toString()}`)
       .then(res => res.json())
       .then(data => {
          if (!cancelled) {
@@ -166,7 +166,7 @@ function Cards({ activeTab }) {
   const [citiesLoaded, setCitiesLoaded] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:5001/api/hotels/cities")
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/hotels/cities`)
       .then(res => res.json())
       .then(data => {
         if (!data.success || !data.cities?.length) return;

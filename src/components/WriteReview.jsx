@@ -35,7 +35,7 @@ export default function WriteReview({ targetId, targetType, onReviewPosted }) {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/reviews', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

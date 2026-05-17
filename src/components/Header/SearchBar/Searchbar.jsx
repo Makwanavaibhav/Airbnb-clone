@@ -167,7 +167,7 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
-        const res = await fetch('http://localhost:5001/api/search/destinations');
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/search/destinations`);
         const data = await res.json();
         if (data.destinations) {
           setAllDestinations(data.destinations);
@@ -189,7 +189,7 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
     const fetchSuggestions = async () => {
       setLoadingSuggestions(true);
       try {
-        const res = await fetch(`http://localhost:5001/api/search/destinations?q=${encodeURIComponent(debouncedQuery.trim())}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/search/destinations?q=${encodeURIComponent(debouncedQuery.trim())}`);
         const data = await res.json();
         setSuggestions(data.destinations || []);
       } catch (err) {

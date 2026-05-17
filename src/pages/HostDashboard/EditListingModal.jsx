@@ -17,7 +17,7 @@ const EditListingModal = ({ property, onClose, getToken, onSuccess }) => {
   const handleSave = async () => {
     try {
       const payload = { ...formData };
-      const res = await axios.put(`http://localhost:5001/api/hotels/${property._id || property.id}`, payload, {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/hotels/${property._id || property.id}`, payload, {
         headers: { Authorization: `Bearer ${getToken()}` }
       });
       if (res.data.success) {

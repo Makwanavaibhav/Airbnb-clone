@@ -86,7 +86,7 @@ const PastTripsTab = () => {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const res = await axios.get('http://localhost:5001/api/bookings/my-trips', {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bookings/my-trips`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         setTrips(res.data.trips || []);

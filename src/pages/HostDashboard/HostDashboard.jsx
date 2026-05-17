@@ -69,7 +69,7 @@ const HostDashboard = () => {
   const fetchHostBookings = async () => {
     setLoadingBookings(true);
     try {
-      const res = await axios.get("http://localhost:5001/api/bookings/host-reservations", {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bookings/host-reservations`, {
         headers: { Authorization: `Bearer ${getToken()}` }
       });
       const all = res.data.trips || [];
@@ -104,7 +104,7 @@ const HostDashboard = () => {
   const fetchListings = async () => {
     setLoadingListings(true);
     try {
-      const response = await fetch("http://localhost:5001/api/hotels/host/me", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/hotels/host/me`, {
         headers: { Authorization: `Bearer ${getToken()}` }
       });
       const data = await response.json();
@@ -116,7 +116,7 @@ const HostDashboard = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this listing?")) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/hotels/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/hotels/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getToken()}` }
       });
@@ -172,7 +172,7 @@ const HostDashboard = () => {
           onClick={async () => {
             const newStatus = prop.status === 'published' ? 'draft' : 'published';
             try {
-              const res = await fetch(`http://localhost:5001/api/hotels/${prop._id}/status`, {
+              const res = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/hotels/${prop._id}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
                 body: JSON.stringify({ status: newStatus })
