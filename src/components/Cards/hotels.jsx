@@ -81,8 +81,8 @@ function SearchSection({ searchContext, searchDest }) {
     
     // Construct query path
     const params = new URLSearchParams();
-    if (searchContext?.checkIn) params.append('checkIn', searchContext.checkIn.toISOString());
-    if (searchContext?.checkOut) params.append('checkOut', searchContext.checkOut.toISOString());
+    if (searchContext?.startDate) params.append('checkIn', searchContext.startDate.toISOString());
+    if (searchContext?.endDate) params.append('checkOut', searchContext.endDate.toISOString());
     const totalGuests = (searchContext?.guests?.adults || 0) + (searchContext?.guests?.children || 0);
     if (totalGuests > 0) params.append('guests', totalGuests);
 

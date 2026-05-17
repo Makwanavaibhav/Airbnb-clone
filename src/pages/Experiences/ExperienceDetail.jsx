@@ -7,6 +7,7 @@ import WriteReview from '../../components/WriteReview';
 import { Share, Heart, Star, ChevronLeft, Clock, Users, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import StripeCheckout from '../../components/StripeCheckout';
+import { useSearch } from '../../context/SearchContext';
 
 const ExperienceDetail = () => {
   const { id } = useParams();
@@ -16,6 +17,7 @@ const ExperienceDetail = () => {
   const reviewsRef = useRef(null);
 
   // Booking state
+  const { appliedSearch } = useSearch();
   const [selectedDate, setSelectedDate] = useState(null);
   const [guests, setGuests] = useState(1);
   const [booking, setBooking] = useState(false);
@@ -33,9 +35,37 @@ const ExperienceDetail = () => {
           setExperience(data);
         }
       })
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Auto-populate guests and available slots from search context
+  useEffect(() => {
+    if (experience && experience.availableDates) {
+      // Auto-select guests
+      const searchGuests = appliedSearch?.guests?.adults + appliedSearch?.guests?.children;
+      if (searchGuests > 1) {
+        setGuests(Math.min(searchGuests, experience.groupSize || 10));
+      }
+
+      // Auto-select date slot if it matches search
+      if (appliedSearch?.startDate && !selectedDate) {
+        const searchDate = new Date(appliedSearch.startDate);
+        searchDate.setHours(0,0,0,0);
+        
+        const matchingSlot = experience.availableDates.find(slot => {
+          const slotDate = new Date(slot.date);
+          slotDate.setHours(0,0,0,0);
+          return slotDate.getTime() === searchDate.getTime() && slot.spotsAvailable > 0;
+        });
+
+        if (matchingSlot) {
+          setSelectedDate(matchingSlot);
+        }
+      }
+    }
+  }, [experience, appliedSearch]);
 
   const validateDates = (selectedSlot) => {
     if (!selectedSlot) return "Please select a date and time slot";

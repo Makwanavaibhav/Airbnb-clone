@@ -6,6 +6,7 @@ import ServiceAreaMap from '../../components/ServiceAreaMap';
 import ReviewsList from '../../components/ReviewsList';
 import WriteReview from '../../components/WriteReview';
 import StripeCheckout from '../../components/StripeCheckout';
+import { useSearch } from '../../context/SearchContext';
 
 const ServiceDetail = () => {
   const { id } = useParams();
@@ -15,6 +16,7 @@ const ServiceDetail = () => {
   const reviewsRef = useRef(null);
 
   // Booking state
+  const { appliedSearch } = useSearch();
   const [selectedDate, setSelectedDate] = useState(null);
   const [booking, setBooking] = useState(false);
   const [dateError, setDateError] = useState(null);
@@ -56,6 +58,24 @@ const ServiceDetail = () => {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Auto-populate available slot from search context
+  useEffect(() => {
+    if (availableDates.length > 0 && appliedSearch?.startDate && !selectedDate) {
+      const searchDate = new Date(appliedSearch.startDate);
+      searchDate.setHours(0,0,0,0);
+      
+      const matchingSlot = availableDates.find(slot => {
+        const slotDate = new Date(slot.date);
+        slotDate.setHours(0,0,0,0);
+        return slotDate.getTime() === searchDate.getTime() && slot.spotsAvailable > 0;
+      });
+
+      if (matchingSlot) {
+        setSelectedDate(matchingSlot);
+      }
+    }
+  }, [availableDates, appliedSearch]);
 
   const validateSessionDate = (sessionDateInput) => {
     if (!sessionDateInput) return "Please select a date and time slot";

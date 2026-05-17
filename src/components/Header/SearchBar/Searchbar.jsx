@@ -221,6 +221,15 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
         : `${totalGuests} guest${totalGuests > 1 ? "s" : ""}${guests.infants > 0 ? `, ${guests.infants} infant${guests.infants > 1 ? "s" : ""}` : ""}${guests.pets > 0 ? `, ${guests.pets} pet${guests.pets > 1 ? "s" : ""}` : ""}`);
 
   const dateSummary = (() => {
+    if (calendarMode === "flexible") {
+      const type = stayLength === "Weekend" ? "weekend" : stayLength === "Week" ? "week" : "month";
+      if (!flexibleMonths || flexibleMonths.length === 0) return `Any ${type}`;
+      
+      const shortMonths = flexibleMonths.map(m => m.substring(0, 3));
+      if (shortMonths.length === 1) return `${stayLength} in ${shortMonths[0]}`;
+      return `${stayLength} in ${shortMonths.join(", ")}`;
+    }
+    
     if (!startDate) return "Add dates";
     const fmt = (d) => `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
     return endDate ? `${fmt(startDate)} – ${fmt(endDate)}` : fmt(startDate);
@@ -269,11 +278,21 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
     const handleExpand = typeof onExpand === "function" ? onExpand : () => {};
     
     // Formatting for applied search
-    const totalAppliedGuests = appliedSearch.guests.adults + appliedSearch.guests.children;
+    const totalAppliedGuests = appliedSearch.guests?.adults + appliedSearch.guests?.children || 0;
     const appliedGuestSummary = totalAppliedGuests === 0 ? "Add guests" : `${totalAppliedGuests} guests`;
-    const appliedDateSummary = appliedSearch.startDate
-      ? `${MONTH_NAMES[appliedSearch.startDate.getMonth()].slice(0,3)} ${appliedSearch.startDate.getDate()}`
-      : "Anytime";
+    const appliedDateSummary = (() => {
+      if (appliedSearch.calendarMode === "flexible") {
+        const type = appliedSearch.stayLength === "Weekend" ? "weekend" : appliedSearch.stayLength === "Week" ? "week" : "month";
+        if (!appliedSearch.flexibleMonths || appliedSearch.flexibleMonths.length === 0) return `Any ${type}`;
+        const shortMonths = appliedSearch.flexibleMonths.map(m => m.substring(0, 3));
+        return shortMonths.length === 1 
+          ? `${appliedSearch.stayLength} in ${shortMonths[0]}`
+          : `${appliedSearch.stayLength} in ${shortMonths.join(", ")}`;
+      }
+      return appliedSearch.startDate
+        ? `${MONTH_NAMES[appliedSearch.startDate.getMonth()].slice(0,3)} ${appliedSearch.startDate.getDate()}`
+        : (dateLabel || "Anytime");
+    })();
 
     return (
       <div ref={compactSearchRef} className="flex justify-center">
@@ -290,7 +309,7 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
           </div>
           <div className="flex items-center px-4 border-r border-gray-200 h-full">
             <span className="font-semibold text-gray-900 text-sm whitespace-nowrap">
-              {appliedSearch.startDate ? appliedDateSummary : (dateLabel || "Anytime")}
+              {appliedDateSummary}
             </span>
           </div>
           <div className="flex items-center gap-3 pl-4 pr-2 h-full">
@@ -527,7 +546,10 @@ function SearchBar({ activeTab, variant = "full", searchRef, compactSearchRef, o
           <div className="pr-3 pl-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => {
-                setAppliedSearch({ destination, startDate, endDate, guests });
+                setAppliedSearch({ 
+                  destination, startDate, endDate, guests, 
+                  calendarMode, stayLength, flexibleMonths, selectedServices 
+                });
                 setActiveSection(null);
                 if (compactSearchRef?.current) {
                   // close expanded bar if we search from it

@@ -181,6 +181,12 @@ const HotelDetails = () => {
       ? appliedSearch.guests
       : { adults: 1, children: 0, infants: 0, pets: 0 }
   );
+  
+  useEffect(() => {
+    if (appliedSearch?.startDate) setStartDate(appliedSearch.startDate);
+    if (appliedSearch?.endDate) setEndDate(appliedSearch.endDate);
+    if (appliedSearch?.guests && appliedSearch.guests.adults > 0) setGuests(appliedSearch.guests);
+  }, [appliedSearch]);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [mapCenter, setMapCenter] = useState(null);
   const calendarRef = useRef(null);
