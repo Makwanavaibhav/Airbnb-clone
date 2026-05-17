@@ -39,9 +39,42 @@ const ExperienceDetail = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const [availableDates, setAvailableDates] = useState([]);
+
+  useEffect(() => {
+    if (experience) {
+      if (experience.availableDates && experience.availableDates.length > 0) {
+        setAvailableDates(experience.availableDates);
+      } else {
+        const dates = [];
+        const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+        let d = new Date();
+        while (dates.length < 5) {
+          const dayNum = d.getDay();
+          const dayStrOptions = Object.keys(daysMap).filter(k => daysMap[k] === dayNum);
+          const hasAvail = !experience.availability || experience.availability.length === 0 || 
+                           experience.availability.some(a => dayStrOptions.includes(a.substring(0,3)));
+          if (hasAvail) {
+            const tSlots = experience.timeSlots && experience.timeSlots.length > 0 ? experience.timeSlots : ['10:00 AM - 1:00 PM'];
+            tSlots.forEach(ts => {
+              dates.push({
+                date: d.toISOString(),
+                timeRange: ts,
+                spotsAvailable: experience.groupSize || 10
+              });
+            });
+          }
+          d.setDate(d.getDate() + 1);
+          if (dates.length >= 10 || d > new Date(Date.now() + 86400000 * 30)) break;
+        }
+        setAvailableDates(dates);
+      }
+    }
+  }, [experience]);
+
   // Auto-populate guests and available slots from search context
   useEffect(() => {
-    if (experience && experience.availableDates) {
+    if (experience) {
       // Auto-select guests
       const searchGuests = appliedSearch?.guests?.adults + appliedSearch?.guests?.children;
       if (searchGuests > 1) {
@@ -49,11 +82,11 @@ const ExperienceDetail = () => {
       }
 
       // Auto-select date slot if it matches search
-      if (appliedSearch?.startDate && !selectedDate) {
+      if (availableDates.length > 0 && appliedSearch?.startDate && !selectedDate) {
         const searchDate = new Date(appliedSearch.startDate);
         searchDate.setHours(0,0,0,0);
         
-        const matchingSlot = experience.availableDates.find(slot => {
+        const matchingSlot = availableDates.find(slot => {
           const slotDate = new Date(slot.date);
           slotDate.setHours(0,0,0,0);
           return slotDate.getTime() === searchDate.getTime() && slot.spotsAvailable > 0;
@@ -64,7 +97,7 @@ const ExperienceDetail = () => {
         }
       }
     }
-  }, [experience, appliedSearch]);
+  }, [experience, availableDates, appliedSearch]);
 
   const validateDates = (selectedSlot) => {
     if (!selectedSlot) return "Please select a date and time slot";
@@ -142,7 +175,6 @@ const ExperienceDetail = () => {
     );
   }
 
-  const availableDates = experience.availableDates || [];
   const mp = experience.meetingPoint;
 
   return (
@@ -230,6 +262,14 @@ const ExperienceDetail = () => {
               <h2 className="text-xl font-bold dark:text-white mb-1">
                 Hosted by {experience.hostName || 'Host'}
               </h2>
+              {experience.hostId && (
+                <button
+                  onClick={() => navigate(`/messages?hostId=${experience.hostId}`)}
+                  className="mt-2 px-4 py-1.5 border border-gray-800 dark:border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition dark:text-white"
+                >
+                  Chat with Host
+                </button>
+              )}
             </div>
             <img
               src={`https://ui-avatars.com/api/?name=${encodeURIComponent(experience.hostName || 'Host')}&background=random`}

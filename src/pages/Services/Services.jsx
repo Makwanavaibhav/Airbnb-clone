@@ -109,8 +109,14 @@ export default function Services() {
                 <div className="w-full md:w-1/2 flex flex-col justify-center px-4 md:px-8">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-yellow-500">★</span>
-                    <span className="text-gray-900 dark:text-white font-medium">{service.rating}</span>
-                    <span className="text-gray-400 text-sm">({service.reviewCount} reviews)</span>
+                    {service.reviewCount > 0 ? (
+                      <>
+                        <span className="text-gray-900 dark:text-white font-medium">{service.rating}</span>
+                        <span className="text-gray-400 text-sm">({service.reviewCount} reviews)</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-900 dark:text-white font-medium">New</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mb-2">
                     {service.serviceType && (

@@ -18,6 +18,7 @@ import AccountSettings from "./pages/AccountSettings/AccountSettings.jsx";
 import BookingSuccess from "./pages/BookingSuccess/BookingSuccess.jsx";
 import ExperienceDetail from "./pages/Experiences/ExperienceDetail.jsx";
 import ServiceDetail from "./pages/Services/ServiceDetail.jsx";
+import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
 
 const Placeholder = ({ title }) => <div className="max-w-[1120px] mx-auto px-6 py-24 text-2xl font-semibold">{title} coming soon...</div>;
 
@@ -132,6 +133,13 @@ function App() {
                 <MainLayout activeTab={activtab} setActiveTab={setActivtab}>
                   <BookingSuccess />
                 </MainLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Route */}
+            <Route path="/admin/listings" element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminDashboard />
               </ProtectedRoute>
             } />
 

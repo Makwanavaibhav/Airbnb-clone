@@ -36,10 +36,13 @@ const ServiceDetail = () => {
         const hasAvail = !service.availability || service.availability.length === 0 || 
                          service.availability.some(a => dayStrOptions.includes(a.substring(0,3)));
         if (hasAvail) {
-          dates.push({
-            date: d.toISOString(),
-            timeRange: '10:00 AM - 1:00 PM',
-            spotsAvailable: 5
+          const tSlots = service.timeSlots && service.timeSlots.length > 0 ? service.timeSlots : ['10:00 AM - 1:00 PM'];
+          tSlots.forEach(ts => {
+            dates.push({
+              date: d.toISOString(),
+              timeRange: ts,
+              spotsAvailable: 5
+            });
           });
         }
         d.setDate(d.getDate() + 1);
@@ -227,7 +230,15 @@ const ServiceDetail = () => {
               />
               <div>
                 <div className="font-bold dark:text-white">{service.hostName || 'Local Professional'}</div>
-                <div className="text-gray-500 text-sm">Verified provider</div>
+                <div className="text-gray-500 text-sm mb-2">Verified provider</div>
+                {service.hostId && (
+                  <button
+                    onClick={() => navigate(`/messages?hostId=${service.hostId}`)}
+                    className="px-4 py-1.5 border border-purple-600 dark:border-purple-400 rounded-lg text-sm font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition"
+                  >
+                    Chat with Provider
+                  </button>
+                )}
               </div>
             </div>
           </div>

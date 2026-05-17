@@ -11,11 +11,10 @@ router.get('/destinations', async (req, res) => {
 
     if (!query || query.trim() === '') {
       // Return all distinct locations — only from published hotels
-      // NOTE: Hotel schema uses 'location', not 'city'
       const allCities = [
         ...await Hotel.distinct('location', { status: 'published' }),
-        ...await Experience.distinct('city'),
-        ...await Service.distinct('city')
+        ...await Experience.distinct('city', { listing_status: 'active' }),
+        ...await Service.distinct('city', { listing_status: 'active' })
       ];
 
       const unique = [...new Set(
@@ -29,8 +28,8 @@ router.get('/destinations', async (req, res) => {
         const regex = new RegExp(regexStr, 'i');
         const [h, e, s] = await Promise.all([
           Hotel.countDocuments({ location: regex, status: 'published' }), // Hotel uses 'location'
-          Experience.countDocuments({ city: regex }),
-          Service.countDocuments({ city: regex })
+          Experience.countDocuments({ city: regex, listing_status: 'active' }),
+          Service.countDocuments({ city: regex, listing_status: 'active' })
         ]);
         return { city, count: h + e + s };
       }));
@@ -44,8 +43,8 @@ router.get('/destinations', async (req, res) => {
 
     const [hotelCities, expCities, svcCities] = await Promise.all([
       Hotel.distinct('location', { location: regex, status: 'published' }), // Hotel uses 'location'
-      Experience.distinct('city', { city: regex }),
-      Service.distinct('city', { city: regex })
+      Experience.distinct('city', { city: regex, listing_status: 'active' }),
+      Service.distinct('city', { city: regex, listing_status: 'active' })
     ]);
 
     const results = [...new Set([
@@ -57,8 +56,8 @@ router.get('/destinations', async (req, res) => {
         const exactRegex = new RegExp(exactRegexStr, 'i');
         const [h, e, s] = await Promise.all([
           Hotel.countDocuments({ location: exactRegex, status: 'published' }), // Hotel uses 'location'
-          Experience.countDocuments({ city: exactRegex }),
-          Service.countDocuments({ city: exactRegex })
+          Experience.countDocuments({ city: exactRegex, listing_status: 'active' }),
+          Service.countDocuments({ city: exactRegex, listing_status: 'active' })
         ]);
         return { city, count: h + e + s };
     }));

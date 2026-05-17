@@ -4,14 +4,20 @@ import { Home, Loader2, Trash2, Edit2, Calendar, Clock, ChevronRight } from "luc
 import { useAuth } from "../../context/AuthContext.jsx";
 import LongLogo from "../../assets/logo/long-logo.png";
 import ListingCreationWizard from "./ListingCreationWizard.jsx";
+import ExperienceServiceWizard from "../HostListingWizard/ExperienceServiceWizard.jsx";
 import EditListingModal from "./EditListingModal.jsx";
 import UserMenu from "../../components/Header/UserMenu/UserMenu.jsx";
+import NotificationBell from "../../components/NotificationBell/NotificationBell.jsx";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 
 const HostDashboard = () => {
   const navigate = useNavigate();
   const { isLoggedIn, getToken, user } = useAuth();
+  const location = useLocation();
   const [showListingForm, setShowListingForm] = useState(false);
+  const [showExpSvcForm, setShowExpSvcForm] = useState(false);
+  const [expSvcType, setExpSvcType] = useState(null);
   const [resumeDraft, setResumeDraft] = useState(null);
   const [activeTab, setActiveTab] = useState("Today");
   const [editingProperty, setEditingProperty] = useState(null);
@@ -40,6 +46,19 @@ const HostDashboard = () => {
     if (activeTab === "Listings") { fetchListings(); loadDrafts(); }
     if (activeTab === "Today" || activeTab === "Calendar") fetchHostBookings();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (location.state?.hostType) {
+      if (location.state.hostType === "home") {
+        setShowListingForm(true);
+      } else if (location.state.hostType === "experience" || location.state.hostType === "service") {
+        setExpSvcType(location.state.hostType);
+        setShowExpSvcForm(true);
+      }
+      // clear state so refresh doesn't pop it up again
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Fix #7: refetch when filter changes
   useEffect(() => {
@@ -191,6 +210,18 @@ const HostDashboard = () => {
     );
   }
 
+  if (showExpSvcForm) {
+    return (
+      <ExperienceServiceWizard
+        initialType={expSvcType}
+        onClose={() => {
+          setShowExpSvcForm(false);
+          setActiveTab("Listings");
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -218,11 +249,30 @@ const HostDashboard = () => {
             className="hidden md:block px-4 py-2 text-sm font-semibold hover:bg-gray-50 rounded-full transition-colors">
             Switch to travelling
           </button>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Fix #2: real user initial */}
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-700 to-black text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              {userInitial}
+          <div className="flex items-center gap-4 shrink-0">
+            <div 
+              onClick={() => navigate('/profile')}
+              className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity overflow-hidden shadow-sm"
+            >
+              {user?.profilePhoto ? (
+                <img
+                  src={user.profilePhoto}
+                  alt="avatar"
+                  className="w-full h-full object-cover"
+                  onError={(e) => { 
+                    e.currentTarget.style.display = 'none'; 
+                    e.currentTarget.nextSibling.style.display = 'flex'; 
+                  }}
+                />
+              ) : null}
+              <span 
+                className="w-full h-full flex items-center justify-center font-bold text-sm"
+                style={{ display: user?.profilePhoto ? 'none' : 'flex' }}
+              >
+                {userInitial}
+              </span>
             </div>
+            <NotificationBell />
             <UserMenu />
           </div>
         </div>
@@ -300,10 +350,16 @@ const HostDashboard = () => {
                   {todayFilter === "today" ? "No check-ins today" : "No upcoming reservations"}
                 </h2>
                 <p className="text-gray-500 mb-8">Start hosting to receive bookings from guests.</p>
-                <button onClick={() => { setResumeDraft(null); setShowListingForm(true); }}
-                  className="px-8 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-medium rounded-lg transition-colors shadow-sm">
-                  Create a listing
-                </button>
+                <div className="flex gap-3">
+                  <button onClick={() => { setResumeDraft(null); setShowListingForm(true); }}
+                    className="px-8 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-medium rounded-lg transition-colors shadow-sm">
+                    Create a home listing
+                  </button>
+                  <button onClick={() => { setExpSvcType("experience"); setShowExpSvcForm(true); }}
+                    className="px-8 py-3 bg-gray-900 hover:bg-black text-white font-medium rounded-lg transition-colors shadow-sm">
+                    Create Experience/Service
+                  </button>
+                </div>
               </div>
             )}
           </>
@@ -314,10 +370,16 @@ const HostDashboard = () => {
           <div className="w-full flex flex-col items-start mt-6">
             <div className="flex justify-between items-center w-full mb-8">
               <h2 className="text-[32px] font-semibold text-gray-900">Your Listings</h2>
-              <button onClick={() => { setResumeDraft(null); setShowListingForm(true); }}
-                className="px-6 py-2.5 flex items-center gap-2 bg-[#222222] hover:bg-black text-white font-medium rounded-[10px] transition-colors shadow-sm">
-                <PlusIcon className="w-5 h-5" /> Create new
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => { setResumeDraft(null); setShowListingForm(true); }}
+                  className="px-6 py-2.5 flex items-center gap-2 bg-[#222222] hover:bg-black text-white font-medium rounded-[10px] transition-colors shadow-sm">
+                  <PlusIcon className="w-5 h-5" /> Home
+                </button>
+                <button onClick={() => { setExpSvcType("experience"); setShowExpSvcForm(true); }}
+                  className="px-6 py-2.5 flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-900 font-medium rounded-[10px] transition-colors shadow-sm">
+                  <PlusIcon className="w-5 h-5" /> Exp / Service
+                </button>
+              </div>
             </div>
 
             {loadingListings ? (
@@ -365,10 +427,16 @@ const HostDashboard = () => {
                 {properties.length === 0 && drafts.length === 0 ? (
                   <div className="w-full bg-gray-50 py-24 rounded-2xl flex flex-col items-center border border-gray-100">
                     <p className="text-gray-500 mb-6 text-lg">You haven't created any listings yet.</p>
-                    <button onClick={() => { setResumeDraft(null); setShowListingForm(true); }}
-                      className="px-8 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-medium rounded-lg transition-colors shadow-sm">
-                      Create a new listing
-                    </button>
+                    <div className="flex gap-3">
+                      <button onClick={() => { setResumeDraft(null); setShowListingForm(true); }}
+                        className="px-8 py-3 bg-[#E01561] hover:bg-[#D70466] text-white font-medium rounded-lg transition-colors shadow-sm">
+                        Create a home listing
+                      </button>
+                      <button onClick={() => { setExpSvcType("experience"); setShowExpSvcForm(true); }}
+                        className="px-8 py-3 border border-gray-300 hover:bg-gray-100 text-gray-900 font-medium rounded-lg transition-colors shadow-sm">
+                        Create experience or service
+                      </button>
+                    </div>
                   </div>
                 ) : properties.length > 0 && (() => {
                   // Bug #11 fix: split into published vs draft accurately

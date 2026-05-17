@@ -6,6 +6,7 @@ import NavItems from "../Header/NavItems/NavItems.jsx";
 import SearchBar from "../Header/SearchBar/Searchbar.jsx";
 import HostDialog from "../Header/HostDialog/HostDialog.jsx";
 import UserMenu from "../Header/UserMenu/UserMenu.jsx";
+import NotificationBell from "../../components/NotificationBell/NotificationBell.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 import { useLocation, useNavigate } from "react-router-dom";
@@ -117,13 +118,21 @@ function DesktopHeader({ activeTab, setActiveTab }) {
                     src={user.profilePhoto}
                     alt="avatar"
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    onError={(e) => { 
+                      e.currentTarget.style.display = 'none'; 
+                      e.currentTarget.nextSibling.style.display = 'flex'; 
+                    }}
                   />
-                ) : (
-                  user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
-                )}
+                ) : null}
+                <span 
+                  className="w-full h-full flex items-center justify-center font-bold text-sm"
+                  style={{ display: user?.profilePhoto ? 'none' : 'flex' }}
+                >
+                  {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                </span>
               </div>
             )}
+            <NotificationBell />
             <UserMenu onOpenLanguageModal={() => setOpenLanguageModal(true)} />
           </div>
         </div>

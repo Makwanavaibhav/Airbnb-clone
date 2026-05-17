@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
   address: { type: String },
   profilePhoto: { type: String, default: null },
   isHost: { type: Boolean, default: false },
+  role: { type: String, enum: ['guest', 'host', 'admin'], default: 'guest' },
   wishlist: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Hotel' 

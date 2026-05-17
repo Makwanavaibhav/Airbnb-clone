@@ -112,8 +112,14 @@ export default function Experiences() {
 
                 <div className="flex items-center gap-1 text-sm font-medium mb-1">
                   <span className="text-yellow-500">★</span>
-                  <span className="text-gray-900 dark:text-white">{item.rating}</span>
-                  <span className="text-gray-500">({item.reviewCount})</span>
+                  {item.reviewCount > 0 ? (
+                    <>
+                      <span className="text-gray-900 dark:text-white">{item.rating}</span>
+                      <span className="text-gray-500">({item.reviewCount})</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-900 dark:text-white font-medium">New</span>
+                  )}
                 </div>
                 <h3 className="text-gray-900 dark:text-white font-medium truncate mb-1">
                   {item.title}

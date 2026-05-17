@@ -63,7 +63,9 @@ const Messages = () => {
   const loadMessages = useCallback(async () => {
     if (!currentUserId) return;
     try {
-      const res = await axios.get(`${API}/api/messages/${currentUserId}`);
+      const res = await axios.get(`${API}/api/messages/${currentUserId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const msgs = res.data.messages || [];
       const map = res.data.userMap || {};
       setUserMap(map);

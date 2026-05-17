@@ -81,6 +81,19 @@ const UserMenu = ({ onOpenLanguageModal }) => {
 
               <DropdownMenuSeparator className="my-2" />
 
+              {/* Admin Section */}
+              {user?.role === 'admin' && (
+                <>
+                  <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/admin/listings")}>
+                    <div className="flex items-center gap-3 text-[#E01561] font-semibold">
+                      <Settings className="h-4 w-4" />
+                      <span>Admin Dashboard</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-2" />
+                </>
+              )}
+
               {/* Section 2 (account) */}
               <DropdownMenuItem className="py-3 cursor-pointer" onClick={() => navigate("/account-settings")}>
                 <div className="flex items-center gap-3">

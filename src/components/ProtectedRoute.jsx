@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const ProtectedRoute = ({ children, requireHost = false }) => {
+const ProtectedRoute = ({ children, requireHost = false, requireAdmin = false }) => {
   const { isLoggedIn, user, loading } = useAuth();
   const location = useLocation();
 
@@ -19,6 +19,10 @@ const ProtectedRoute = ({ children, requireHost = false }) => {
   }
 
   if (requireHost && !user?.isHost) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireAdmin && user?.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 

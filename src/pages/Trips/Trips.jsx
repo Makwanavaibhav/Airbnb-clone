@@ -128,10 +128,10 @@ function TripCard({ trip, onCancel, onDelete }) {
             >
               View Details
             </button>
-            {/* Message Host — hotel bookings only */}
-            {trip.bookingType === 'hotel' && trip.status === 'confirmed' && trip.hotelId?.hostId && (
+            {/* Message Host — all bookings */}
+            {trip.status === 'confirmed' && (trip.hotelId?.hostId || trip.experienceId?.hostId || trip.serviceId?.hostId) && (
               <button
-                onClick={() => navigate(`/messages?hostId=${trip.hotelId.hostId}`)}
+                onClick={() => navigate(`/messages?hostId=${trip.hotelId?.hostId || trip.experienceId?.hostId || trip.serviceId?.hostId}`)}
                 className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black text-sm font-medium transition-colors"
               >
                 Message Host

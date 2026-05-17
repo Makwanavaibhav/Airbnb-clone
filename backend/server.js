@@ -13,6 +13,7 @@ const bookingRoutes = require("./routes/bookingRoutes");
 const userRoutes = require("./routes/userRoutes");
 const experienceRoutes = require("./routes/experienceRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
+const listingRoutes = require("./routes/listingRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -75,6 +76,7 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/search", require("./routes/search"));
+app.use("/api/listings", listingRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
@@ -138,12 +140,27 @@ io.on('connection', (socket) => {
 
     try {
       const Message = require('./models/Message');
+      const Notification = require('./models/Notification');
+      const User = require('./models/User');
+      
       const newMessage = await Message.create({
         conversationId: finalConversationId,
         senderId,
         receiverId,
         message,
         timestamp: new Date()
+      });
+
+      // Fetch sender name for notification
+      const sender = await User.findById(senderId).select('firstName lastName');
+      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Someone';
+
+      // Create a notification for the receiver
+      await Notification.create({
+        userId: receiverId,
+        type: 'new_message',
+        title: `New message from ${senderName}`,
+        message: message.length > 50 ? message.substring(0, 47) + '...' : message
       });
 
       // Broadcast to everyone in the room INCLUDING the sender (so sender gets the DB-saved message with real _id)

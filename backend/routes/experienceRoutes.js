@@ -3,10 +3,17 @@ const router = express.Router();
 const Experience = require('../models/Experience');
 
 // GET /api/experiences?city=Goa
+// PUBLIC — only returns active & visible listings (or legacy seeded records without listing_status)
 router.get('/', async (req, res) => {
   try {
     const { city } = req.query;
-    let query = {};
+    let query = {
+      // Allow records where listing_status is 'active' OR field doesn't exist yet (legacy seeded data)
+      $or: [
+        { listing_status: 'active', visibility: true },
+        { listing_status: { $exists: false } }
+      ]
+    };
     if (city && city.toLowerCase() !== 'anywhere' && city.toLowerCase() !== 'nearby') {
       query.city = { $regex: city, $options: 'i' };
     }
