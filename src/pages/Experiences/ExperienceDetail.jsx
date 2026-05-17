@@ -35,7 +35,6 @@ const ExperienceDetail = () => {
           setExperience(data);
         }
       })
-      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);

@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, CircleQuestionMark, Heart, MessageSquare, Settings, Globe, LogOut } from "lucide-react";
+import { Menu, CircleQuestionMark, Heart, MessageSquare, Settings, Globe, LogOut, User as UserIcon } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
