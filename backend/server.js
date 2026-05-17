@@ -127,14 +127,25 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_message', async (data) => {
-    const { roomId, conversationId, senderId, receiverId, message } = data;
+    const { roomId, conversationId, receiverId, message } = data;
     const finalConversationId = roomId || conversationId;
 
-    if (!socket.userId || String(socket.userId) !== String(senderId)) {
+    // ── Use socket.userId (set from verified JWT) as authoritative sender.
+    // Never trust the client-supplied senderId — ID format mismatches would
+    // silently drop every message if we compare them with strict equality.
+    const senderId = String(socket.userId);
+
+    if (!senderId) {
+      socket.emit('message_error', { error: 'Not authenticated' });
       return;
     }
 
     if (!message || !String(message).trim()) {
+      return;
+    }
+
+    if (!finalConversationId || !receiverId) {
+      socket.emit('message_error', { error: 'Missing conversationId or receiverId' });
       return;
     }
 
@@ -163,11 +174,14 @@ io.on('connection', (socket) => {
         message: message.length > 50 ? message.substring(0, 47) + '...' : message
       });
 
-      // Broadcast to everyone in the room INCLUDING the sender (so sender gets the DB-saved message with real _id)
+      // Ensure sender is also in the room (handles reconnect edge-cases)
+      socket.join(finalConversationId);
+
+      // Broadcast to everyone in the room INCLUDING the sender so they
+      // see the DB-saved message with the real _id, senderId, and timestamp.
       io.to(finalConversationId).emit('receive_message', newMessage);
     } catch (err) {
       console.error('send_message error:', err);
-      // Notify the sender so they know the message failed
       socket.emit('message_error', { error: 'Failed to save message. Please try again.' });
     }
   });

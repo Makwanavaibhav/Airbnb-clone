@@ -17,8 +17,10 @@ const experienceSchema = new mongoose.Schema({
   rating: { type: Number, default: 4.9 },
   reviewCount: { type: Number, default: 0 },
   groupSize: { type: Number, default: 10 },
-  availability: [String],
-  timeSlots: [String],
+  availableDays: { type: [String], default: [] },
+  slotDurationMinutes: { type: Number },
+  slotsStartTime: { type: String },
+  slotsEndTime: { type: String },
   availableDates: [
     {
       date: Date,

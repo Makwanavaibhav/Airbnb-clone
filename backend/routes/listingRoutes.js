@@ -77,7 +77,7 @@ router.post('/experience', authenticateToken, publicUpload.array('photos', 20), 
     const {
       title, shortDescription, description, category,
       city, location, isRemote, pricePerPerson, duration,
-      groupSize, coverImageIndex, availability, tags
+      groupSize, coverImageIndex, availableDays, slotDurationMinutes, slotsStartTime, slotsEndTime, tags
     } = req.body;
 
     if (!title || !city || !pricePerPerson) {
@@ -120,8 +120,10 @@ router.post('/experience', authenticateToken, publicUpload.array('photos', 20), 
       coverImageIndex: parseInt(coverImageIndex) || 0,
       hostId: req.user._id,
       hostName: host ? `${host.firstName} ${host.lastName}` : 'Host',
-      availability: availability ? (Array.isArray(availability) ? availability : JSON.parse(availability)) : [],
-      timeSlots: req.body.timeSlots ? (Array.isArray(req.body.timeSlots) ? req.body.timeSlots : JSON.parse(req.body.timeSlots)) : [],
+      availableDays: availableDays ? (Array.isArray(availableDays) ? availableDays : JSON.parse(availableDays)) : [],
+      slotDurationMinutes: parseInt(slotDurationMinutes) || null,
+      slotsStartTime: slotsStartTime || null,
+      slotsEndTime: slotsEndTime || null,
       tags: tags ? (Array.isArray(tags) ? tags : JSON.parse(tags)) : [],
       listing_status: 'pending_review',
       visibility: false,
@@ -165,7 +167,7 @@ router.post('/service', authenticateToken, publicUpload.array('photos', 20), asy
     const {
       title, shortDescription, description, serviceType,
       city, location, isRemote, pricePerSession,
-      coverImageIndex, availability, tags
+      coverImageIndex, availableDays, slotDurationMinutes, slotsStartTime, slotsEndTime, tags
     } = req.body;
 
     if (!title || !city || !pricePerSession) {
@@ -204,8 +206,10 @@ router.post('/service', authenticateToken, publicUpload.array('photos', 20), asy
       coverImageIndex: parseInt(coverImageIndex) || 0,
       hostId: req.user._id,
       hostName: host ? `${host.firstName} ${host.lastName}` : 'Host',
-      availability: availability ? (Array.isArray(availability) ? availability : JSON.parse(availability)) : [],
-      timeSlots: req.body.timeSlots ? (Array.isArray(req.body.timeSlots) ? req.body.timeSlots : JSON.parse(req.body.timeSlots)) : [],
+      availableDays: availableDays ? (Array.isArray(availableDays) ? availableDays : JSON.parse(availableDays)) : [],
+      slotDurationMinutes: parseInt(slotDurationMinutes) || null,
+      slotsStartTime: slotsStartTime || null,
+      slotsEndTime: slotsEndTime || null,
       tags: tags ? (Array.isArray(tags) ? tags : JSON.parse(tags)) : [],
       listing_status: 'pending_review',
       visibility: false,

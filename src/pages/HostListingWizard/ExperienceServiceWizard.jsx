@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { X, ChevronLeft, ChevronRight, Upload, Star, CheckCircle2, AlertCircle } from "lucide-react";
+import LongLogo from "../../assets/logo/long-logo.png";
 
 const API = "http://localhost:5001";
 
@@ -28,8 +29,48 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
     location: "",
     isRemote: false,
     price: "",
-    availability: [],
+    availableDays: [],
+    slotDurationMinutes: 60,
+    slotsStartTime: "09:00",
+    slotsEndTime: "18:00",
   });
+  
+  const [customDuration, setCustomDuration] = useState("");
+  const [isCustomDuration, setIsCustomDuration] = useState(false);
+
+  const toggleDay = (day) => {
+    setForm(f => {
+      const days = new Set(f.availableDays);
+      if (days.has(day)) days.delete(day);
+      else days.add(day);
+      return { ...f, availableDays: Array.from(days) };
+    });
+  };
+
+  const generateSlots = () => {
+    if (!form.slotDurationMinutes || !form.slotsStartTime || !form.slotsEndTime) return [];
+    const parseTime = (timeStr) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+    let start = parseTime(form.slotsStartTime);
+    const end = parseTime(form.slotsEndTime);
+    const duration = Number(form.slotDurationMinutes);
+    if (duration <= 0 || start >= end) return [];
+    
+    const slots = [];
+    while (start + duration <= end) {
+      const h = Math.floor(start / 60);
+      const m = start % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      slots.push(`${h12}:${m.toString().padStart(2, '0')} ${ampm}`);
+      start += duration;
+    }
+    return slots;
+  };
+
+  const previewSlots = generateSlots();
 
   const [photos, setPhotos] = useState([]);       // File[]
   const [photoPreviews, setPhotoPreviews] = useState([]);
@@ -53,6 +94,15 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
       if (!form.description.trim()) return "Full description is required";
       if (!form.city.trim()) return "City is required";
       if (!form.price || isNaN(form.price) || Number(form.price) <= 0) return "Valid price is required";
+      if (form.availableDays.length === 0) return "At least one day must be selected";
+      
+      const parseTime = (timeStr) => {
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+      if (parseTime(form.slotsEndTime) < parseTime(form.slotsStartTime) + Number(form.slotDurationMinutes)) {
+        return "End time must be at least start time + duration";
+      }
     }
     if (step === 2) {
       if (photos.length < 3) return "Please upload at least 3 photos";
@@ -118,16 +168,12 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
         fd.append("serviceType", form.category);
       }
       
-      if (form.availability) {
-        // Convert comma-separated string to JSON array for backend
-        const days = form.availability.split(',').map(d => d.trim()).filter(Boolean);
-        fd.append("availability", JSON.stringify(days));
+      if (form.availableDays && form.availableDays.length > 0) {
+        fd.append("availableDays", JSON.stringify(form.availableDays));
       }
-
-      if (form.timeSlots) {
-        const times = form.timeSlots.split(',').map(t => t.trim()).filter(Boolean);
-        fd.append("timeSlots", JSON.stringify(times));
-      }
+      fd.append("slotDurationMinutes", form.slotDurationMinutes);
+      fd.append("slotsStartTime", form.slotsStartTime);
+      fd.append("slotsEndTime", form.slotsEndTime);
 
       photos.forEach(f => fd.append("photos", f));
 
@@ -159,8 +205,8 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
   // ── Success screen ────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-10 text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-10 text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
@@ -175,31 +221,32 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-white flex flex-col">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-900">
-            {step === 0 ? "Create a Listing" : STEPS[step]}
-          </h2>
-          <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center justify-between px-6 md:px-16 h-20">
+        <img src={LongLogo} alt="Airbnb" className="h-8 w-auto" />
 
-        {/* Progress bar */}
-        <div className="px-8 pt-4 pb-2">
-          <div className="flex items-center gap-2 mb-1">
+        {/* Progress bar + step label */}
+        <div className="flex-1 max-w-sm mx-8">
+          <div className="flex items-center gap-1.5 mb-1">
             {STEPS.map((s, i) => (
-              <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= step ? "bg-[#E01561]" : "bg-gray-200"}`} />
+              <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= step ? "bg-[#E01561]" : "bg-gray-200"}`} />
             ))}
           </div>
-          <p className="text-xs text-gray-400 text-right">Step {step + 1} of {STEPS.length}</p>
+          <p className="text-xs text-gray-400 text-center">
+            {step === 0 ? "Create a Listing" : STEPS[step]} · Step {step + 1} of {STEPS.length}
+          </p>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+        <button onClick={onClose} className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="w-full px-6 md:px-16 py-10 space-y-6">
 
           {/* ── Step 0: Basics ── */}
           {step === 0 && (
@@ -282,16 +329,79 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
                       placeholder="e.g. 10" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]" />
                   </div>
                 )}
+              </div>
+
+              {/* ── Smart Scheduling System ── */}
+              <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Available Days</label>
-                  <input value={form.availability || ''} onChange={e => set("availability", e.target.value)}
-                    placeholder="e.g. Mon, Tue, Fri" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]" />
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Available Days <span className="text-red-500">*</span></label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+                      <button key={day} onClick={() => toggleDay(day)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${form.availableDays.includes(day) ? "bg-[#E01561] text-white" : "bg-white border border-gray-300 text-gray-600 hover:border-gray-400"}`}>
+                        {day}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time Slots</label>
-                  <input value={form.timeSlots || ''} onChange={e => set("timeSlots", e.target.value)}
-                    placeholder="e.g. 10:00 AM, 2:00 PM" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]" />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Session Duration <span className="text-red-500">*</span></label>
+                    <select value={isCustomDuration ? "custom" : form.slotDurationMinutes} 
+                      onChange={e => {
+                        if (e.target.value === "custom") {
+                          setIsCustomDuration(true);
+                        } else {
+                          setIsCustomDuration(false);
+                          set("slotDurationMinutes", e.target.value);
+                        }
+                      }}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]">
+                      <option value="30">30 min</option>
+                      <option value="60">1 hr</option>
+                      <option value="90">1.5 hr</option>
+                      <option value="120">2 hr</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                    {isCustomDuration && (
+                      <input type="number" value={customDuration} onChange={e => {
+                          setCustomDuration(e.target.value);
+                          set("slotDurationMinutes", e.target.value);
+                        }} 
+                        placeholder="Minutes" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Start Time <span className="text-red-500">*</span></label>
+                    <input type="time" step="900" value={form.slotsStartTime} onChange={e => set("slotsStartTime", e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">End Time <span className="text-red-500">*</span></label>
+                    <input type="time" step="900" value={form.slotsEndTime} onChange={e => set("slotsEndTime", e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E01561]/30 focus:border-[#E01561]" />
+                  </div>
                 </div>
+
+                {/* Preview Slots */}
+                {previewSlots.length > 0 ? (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Generated Time Slots</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {previewSlots.map((slot, i) => (
+                        <span key={i} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg shadow-sm">
+                          {slot}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 italic">Guests will book one slot at a time.</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-700 font-medium">Please set valid duration and times to generate slots.</p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -434,9 +544,11 @@ export default function ExperienceServiceWizard({ onClose, initialType = null })
             </div>
           )}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-8 py-5 border-t border-gray-100 bg-white">
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 bg-white border-t border-gray-100">
+        <div className="w-full px-6 md:px-16 py-5 flex items-center justify-between">
           <button onClick={step === 0 ? onClose : back}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
             {step === 0 ? <><X className="w-4 h-4" /> Cancel</> : <><ChevronLeft className="w-4 h-4" /> Back</>}

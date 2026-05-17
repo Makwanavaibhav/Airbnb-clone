@@ -27,26 +27,55 @@ const ServiceDetail = () => {
     if (service) {
       const dates = [];
       const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+      
+      const availableDays = service.availableDays?.length > 0 ? service.availableDays : ['Mon','Wed','Fri'];
+      const duration = service.slotDurationMinutes || 60;
+      const startTime = service.slotsStartTime || '09:00';
+      const endTime = service.slotsEndTime || '17:00';
+
+      const parseTime = (t) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + (m || 0);
+      };
+      
+      const formatTime = (totalMins) => {
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+      };
+
+      const tSlots = [];
+      let startMins = parseTime(startTime);
+      const endMins = parseTime(endTime);
+      
+      if (duration > 0 && startMins < endMins) {
+         while (startMins + duration <= endMins) {
+           tSlots.push(`${formatTime(startMins)} - ${formatTime(startMins + duration)}`);
+           startMins += duration;
+         }
+      }
+      if (tSlots.length === 0) tSlots.push('09:00 AM - 10:00 AM'); // fallback
+
       let d = new Date();
-      // start checking from today
-      while (dates.length < 5) {
+      d.setHours(0,0,0,0);
+
+      while (dates.length < 10) { // get next 10 slots
         const dayNum = d.getDay();
         const dayStrOptions = Object.keys(daysMap).filter(k => daysMap[k] === dayNum);
-        // service.availability is something like ['Mon', 'Tue']
-        const hasAvail = !service.availability || service.availability.length === 0 || 
-                         service.availability.some(a => dayStrOptions.includes(a.substring(0,3)));
-        if (hasAvail) {
-          const tSlots = service.timeSlots && service.timeSlots.length > 0 ? service.timeSlots : ['10:00 AM - 1:00 PM'];
+        
+        if (availableDays.some(a => dayStrOptions.includes(a.substring(0,3)))) {
           tSlots.forEach(ts => {
             dates.push({
-              date: d.toISOString(),
+              date: new Date(d).toISOString(),
               timeRange: ts,
-              spotsAvailable: 5
+              spotsAvailable: 5 // Default for service
             });
           });
         }
         d.setDate(d.getDate() + 1);
-        if (dates.length >= 5 || d > new Date(Date.now() + 86400000 * 30)) break; // reasonable limit
+        if (dates.length >= 20 || d > new Date(Date.now() + 86400000 * 60)) break; // reasonable limit
       }
       setAvailableDates(dates);
     }

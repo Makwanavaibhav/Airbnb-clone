@@ -88,8 +88,21 @@ export function HotelCard({ hotel }) {
         <div className="flex justify-between items-start">
           <h3 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 truncate pr-2">{hotel.location}</h3>
           <div className="flex items-center gap-1 shrink-0">
-            <FiStar className="w-[14px] h-[14px] fill-current text-gray-900 dark:text-gray-100" />
-            <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">{hotel.rating}</span>
+            {hotel.reviewCount > 0 ? (
+              <>
+                <FiStar className="w-[14px] h-[14px] fill-current text-gray-900 dark:text-gray-100" />
+                <span className="text-[15px] text-gray-900 dark:text-gray-100 font-light">
+                  {hotel.avgRating ?? hotel.rating}
+                </span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400 font-light">
+                  ({hotel.reviewCount})
+                </span>
+              </>
+            ) : (
+              <span className="text-[13px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">
+                New
+              </span>
+            )}
           </div>
         </div>
         

@@ -43,32 +43,59 @@ const ExperienceDetail = () => {
 
   useEffect(() => {
     if (experience) {
-      if (experience.availableDates && experience.availableDates.length > 0) {
-        setAvailableDates(experience.availableDates);
-      } else {
-        const dates = [];
-        const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
-        let d = new Date();
-        while (dates.length < 5) {
-          const dayNum = d.getDay();
-          const dayStrOptions = Object.keys(daysMap).filter(k => daysMap[k] === dayNum);
-          const hasAvail = !experience.availability || experience.availability.length === 0 || 
-                           experience.availability.some(a => dayStrOptions.includes(a.substring(0,3)));
-          if (hasAvail) {
-            const tSlots = experience.timeSlots && experience.timeSlots.length > 0 ? experience.timeSlots : ['10:00 AM - 1:00 PM'];
-            tSlots.forEach(ts => {
-              dates.push({
-                date: d.toISOString(),
-                timeRange: ts,
-                spotsAvailable: experience.groupSize || 10
-              });
-            });
-          }
-          d.setDate(d.getDate() + 1);
-          if (dates.length >= 10 || d > new Date(Date.now() + 86400000 * 30)) break;
-        }
-        setAvailableDates(dates);
+      const dates = [];
+      const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+      
+      const availableDays = experience.availableDays?.length > 0 ? experience.availableDays : ['Mon','Wed','Fri'];
+      const duration = experience.slotDurationMinutes || 120;
+      const startTime = experience.slotsStartTime || '09:00';
+      const endTime = experience.slotsEndTime || '18:00';
+
+      const parseTime = (t) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + (m || 0);
+      };
+      
+      const formatTime = (totalMins) => {
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+      };
+
+      const tSlots = [];
+      let startMins = parseTime(startTime);
+      const endMins = parseTime(endTime);
+      
+      if (duration > 0 && startMins < endMins) {
+         while (startMins + duration <= endMins) {
+           tSlots.push(`${formatTime(startMins)} - ${formatTime(startMins + duration)}`);
+           startMins += duration;
+         }
       }
+      if (tSlots.length === 0) tSlots.push('10:00 AM - 12:00 PM'); // fallback
+
+      let d = new Date();
+      d.setHours(0,0,0,0);
+
+      while (dates.length < 10) { // next 10 slots
+        const dayNum = d.getDay();
+        const dayStrOptions = Object.keys(daysMap).filter(k => daysMap[k] === dayNum);
+        
+        if (availableDays.some(a => dayStrOptions.includes(a.substring(0,3)))) {
+          tSlots.forEach(ts => {
+            dates.push({
+              date: new Date(d).toISOString(),
+              timeRange: ts,
+              spotsAvailable: experience.groupSize || 10
+            });
+          });
+        }
+        d.setDate(d.getDate() + 1);
+        if (dates.length >= 20 || d > new Date(Date.now() + 86400000 * 60)) break; // reasonable limit
+      }
+      setAvailableDates(dates);
     }
   }, [experience]);
 

@@ -5,6 +5,31 @@ const multerS3 = require("multer-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
 const { authenticateToken } = require("../middleware/authMiddleware");
 const Hotel = require("../models/Hotel");
+const Review = require("../models/Review");
+
+// ── Helper: attach real review stats to an array of hotel plain objects ────────
+async function enrichWithReviews(hotels) {
+  if (!hotels || hotels.length === 0) return hotels;
+  const ids = hotels.map(h => h._id);
+  // Single aggregation query for all hotels at once
+  const stats = await Review.aggregate([
+    { $match: { targetType: 'hotel', targetId: { $in: ids } } },
+    { $group: {
+        _id: '$targetId',
+        count: { $sum: 1 },
+        avg:   { $avg: '$rating' }
+    }}
+  ]);
+  const statsMap = {};
+  stats.forEach(s => { statsMap[String(s._id)] = { count: s.count, avg: s.avg }; });
+  return hotels.map(h => {
+    const s = statsMap[String(h._id)] || { count: 0, avg: null };
+    const obj = typeof h.toObject === 'function' ? h.toObject() : { ...h };
+    obj.reviewCount = s.count;
+    obj.avgRating   = s.count > 0 ? Math.round(s.avg * 10) / 10 : null;
+    return obj;
+  });
+}
 
 // S3 Configuration Fallback 
 let upload;
@@ -163,7 +188,8 @@ router.get("/search", async (req, res) => {
       }
     }
 
-    res.json(results);
+    const enriched = await enrichWithReviews(results);
+    res.json(enriched);
   } catch (err) {
     console.error("GET /api/hotels/search error:", err);
     res.status(500).json({ error: "Failed to search hotels" });
@@ -189,7 +215,8 @@ router.get("/city/:city", async (req, res) => {
     filter.status = "published";
 
     const hotels = await Hotel.find(filter);
-    res.json(hotels);
+    const enriched = await enrichWithReviews(hotels);
+    res.json(enriched);
   } catch (err) {
     console.error("GET /api/hotels/city error:", err);
     res.status(500).json({ error: "Failed to fetch hotels by city" });
@@ -306,7 +333,8 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const hotels = await Hotel.find({ status: "published" });
-    res.json(hotels);
+    const enriched = await enrichWithReviews(hotels);
+    res.json(enriched);
   } catch (err) {
     console.error("GET /api/hotels error:", err);
     res.status(500).json({ error: "Failed to fetch hotels" });

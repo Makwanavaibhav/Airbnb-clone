@@ -114,32 +114,34 @@ const BookingSuccess = () => {
           Booking Confirmed! 🎉
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mb-8 font-light">
-          Your stay has been successfully booked. Have a great trip!
+          Your reservation has been successfully booked. Have a great time!
         </p>
 
         {item && (
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 text-left mb-8 space-y-3">
             <div className="font-semibold text-gray-900 dark:text-white text-[16px]">
-              {item.title || 'Your stay'}
+              {item.title || 'Your reservation'}
             </div>
             {item.location && (
               <div className="text-sm text-gray-500">{item.location}</div>
             )}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 grid grid-cols-2 gap-2 text-sm">
               <div>
-                <div className="text-[11px] uppercase font-bold text-gray-400 mb-1">Check-in</div>
+                <div className="text-[11px] uppercase font-bold text-gray-400 mb-1">{type === 'service' ? 'Session Date' : 'Check-in'}</div>
                 <div className="text-gray-800 dark:text-gray-200 font-medium">{checkIn}</div>
               </div>
-              <div>
-                <div className="text-[11px] uppercase font-bold text-gray-400 mb-1">Check-out</div>
-                <div className="text-gray-800 dark:text-gray-200 font-medium">{checkOut}</div>
-              </div>
+              {checkOut && type !== 'service' && (
+                <div>
+                  <div className="text-[11px] uppercase font-bold text-gray-400 mb-1">Check-out</div>
+                  <div className="text-gray-800 dark:text-gray-200 font-medium">{checkOut}</div>
+                </div>
+              )}
             </div>
-            {booking?.totalAmount && (
+            {(booking?.totalAmount || booking?.totalPrice) && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex justify-between text-sm font-semibold">
                 <span className="text-gray-700 dark:text-gray-300">Total Paid</span>
                 <span className="text-gray-900 dark:text-white">
-                  ₹{Number(booking.totalAmount).toLocaleString('en-IN')}
+                  ₹{Number(booking.totalAmount || booking.totalPrice).toLocaleString('en-IN')}
                 </span>
               </div>
             )}

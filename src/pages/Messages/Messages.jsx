@@ -16,15 +16,32 @@ function buildConvoId(userA, userB) {
   return `dm_${ids[0]}_${ids[1]}`;
 }
 
-function getOtherUserId(convoId, currentUserId) {
+function getOtherUserId(convoId, currentUserId, messages = []) {
+  const curr = String(currentUserId);
+  
+  // 1. Bulletproof method: check the actual messages in this thread
+  if (messages && messages.length > 0) {
+    for (const m of messages) {
+      if (m.senderId && String(m.senderId) !== curr) return String(m.senderId);
+      if (m.receiverId && String(m.receiverId) !== curr) return String(m.receiverId);
+    }
+  }
+
+  // 2. Fallback: try to parse the convoId string
+  if (!convoId) return null;
   const parts = convoId.split('_');
+  
   // dm_id1_id2
-  if (parts[0] === 'dm') {
-    return parts[1] === currentUserId ? parts[2] : parts[1];
+  if (parts[0] === 'dm' && parts.length === 3) {
+    return String(parts[1]) === curr ? parts[2] : parts[1];
   }
   // legacy: hotelId_guestId_hostId
   if (parts.length >= 3) {
-    return parts[1] === currentUserId ? parts[2] : parts[1];
+    return String(parts[1]) === curr ? parts[2] : parts[1];
+  }
+  // fallback for id1_id2 (length 2)
+  if (parts.length === 2) {
+    return String(parts[0]) === curr ? parts[1] : parts[0];
   }
   return null;
 }
@@ -56,6 +73,7 @@ const Messages = () => {
   const [activeConvo, setActiveConvo] = useState(null);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sendError, setSendError] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -82,7 +100,7 @@ const Messages = () => {
       const threadList = Object.entries(grouped).map(([convoId, msgs]) => {
         const sorted = [...msgs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         const last = sorted[0];
-        const otherId = getOtherUserId(convoId, currentUserId);
+        const otherId = getOtherUserId(convoId, currentUserId, msgs);
         return { conversationId: convoId, lastMsg: last, otherUserId: otherId };
       }).sort((a, b) => new Date(b.lastMsg.timestamp) - new Date(a.lastMsg.timestamp));
 
@@ -138,7 +156,7 @@ const Messages = () => {
       });
       setThreads(prev => {
         const existing = prev.find(t => t.conversationId === convoId);
-        const otherId = getOtherUserId(convoId, currentUserId);
+        const otherId = getOtherUserId(convoId, currentUserId, [newMsg]);
         if (existing) {
           return [
             { ...existing, lastMsg: newMsg },
@@ -159,15 +177,22 @@ const Messages = () => {
       });
     };
 
+    const handleMessageError = ({ error }) => {
+      setSendError(error || 'Message failed to send.');
+      // auto-clear after 4 s
+      setTimeout(() => setSendError(''), 4000);
+    };
+
     socket.on('receive_message', handleReceiveMessage);
     socket.on('connect', joinAllRooms);
+    socket.on('message_error', handleMessageError);
 
     return () => {
-      // Bug #10 fix: only remove our specific listeners — do NOT call disconnectSocket()
+      // Only remove our specific listeners — do NOT call disconnectSocket()
       // because socket is a module-level singleton shared across the app.
-      // Disconnecting here would sever it for all components and cause missed messages on re-mount.
       socket.off('receive_message', handleReceiveMessage);
       socket.off('connect', joinAllRooms);
+      socket.off('message_error', handleMessageError);
     };
   }, [currentUserId, token]); // eslint-disable-line
 
@@ -199,19 +224,50 @@ const Messages = () => {
     const text = inputText.trim();
     if (!text || !activeConvo || !currentUserId) return;
 
-    const otherId = getOtherUserId(activeConvo, currentUserId);
-    if (!otherId) return;
+    const otherId = getOtherUserId(activeConvo, currentUserId, allMessages[activeConvo]);
+    if (!otherId) {
+      setSendError('Could not identify recipient.');
+      return;
+    }
 
-    const messageData = {
-      roomId: activeConvo,
+    // ── Optimistic UI: show message immediately so sender gets instant feedback
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMsg = {
+      _id: tempId,
+      conversationId: activeConvo,
       senderId: currentUserId,
       receiverId: otherId,
-      message: text
+      message: text,
+      timestamp: new Date().toISOString(),
     };
+    setAllMessages(prev => ({
+      ...prev,
+      [activeConvo]: [...(prev[activeConvo] || []), optimisticMsg],
+    }));
+    setThreads(prev => {
+      const existing = prev.find(t => t.conversationId === activeConvo);
+      if (existing) {
+        return [
+          { ...existing, lastMsg: optimisticMsg },
+          ...prev.filter(t => t.conversationId !== activeConvo),
+        ];
+      }
+      return [{ conversationId: activeConvo, lastMsg: optimisticMsg, otherUserId: otherId }, ...prev];
+    });
 
-    socket.emit('send_message', messageData);
+    // Ensure we're in the room before emitting (handles reconnect edge-case)
+    if (!socket.connected) connectSocket(token);
+    socket.emit('join_room', activeConvo);
+
+    socket.emit('send_message', {
+      roomId: activeConvo,
+      senderId: currentUserId,   // kept for legacy; server now uses socket.userId
+      receiverId: otherId,
+      message: text,
+    });
 
     setInputText('');
+    setSendError('');
     inputRef.current?.focus();
   };
 
@@ -229,14 +285,14 @@ const Messages = () => {
 
   const activeName = (() => {
     if (!activeConvo) return '';
-    const otherId = getOtherUserId(activeConvo, currentUserId);
+    const otherId = getOtherUserId(activeConvo, currentUserId, allMessages[activeConvo]);
     const u = userMap[otherId];
     return u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : 'User';
   })();
 
   const activeAvatar = (() => {
     if (!activeConvo) return '';
-    const otherId = getOtherUserId(activeConvo, currentUserId);
+    const otherId = getOtherUserId(activeConvo, currentUserId, allMessages[activeConvo]);
     return userMap[otherId]?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeName)}&background=random&size=80`;
   })();
 
@@ -337,6 +393,12 @@ const Messages = () => {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 flex flex-col gap-2 bg-gray-50 dark:bg-gray-800">
+              {/* Send error toast */}
+              {sendError && (
+                <div className="sticky top-2 z-10 mx-auto px-4 py-2 bg-red-500 text-white text-sm rounded-full shadow-lg">
+                  ⚠️ {sendError}
+                </div>
+              )}
               {activeMessages.length === 0 && (
                 <div className="m-auto text-center text-sm text-gray-400 dark:text-gray-500 py-12">
                   <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-40" />
@@ -345,6 +407,7 @@ const Messages = () => {
               )}
               {activeMessages.map((msg, i) => {
                 const isOwn = String(msg.senderId) === currentUserId;
+                const isTemp = String(msg._id || '').startsWith('temp_');
                 const showTime = i === 0 || 
                   new Date(msg.timestamp) - new Date(activeMessages[i-1]?.timestamp) > 5 * 60 * 1000;
                 return (
@@ -357,12 +420,15 @@ const Messages = () => {
                     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                       <div className={`
                         max-w-[70%] px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm
+                        transition-opacity duration-200
+                        ${isTemp ? 'opacity-60' : 'opacity-100'}
                         ${isOwn
                           ? 'bg-[#FF385C] text-white rounded-br-sm'
                           : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm border border-gray-100 dark:border-none'
                         }
                       `}>
                         {msg.message}
+                        {isTemp && isOwn && <span className="ml-2 text-[11px] opacity-70">sending…</span>}
                       </div>
                     </div>
                   </React.Fragment>

@@ -15,8 +15,10 @@ const serviceSchema = new mongoose.Schema({
   hostName: { type: String },
   rating: { type: Number, default: 4.9 },
   reviewCount: { type: Number, default: 0 },
-  availability: [String],
-  timeSlots: [String],
+  availableDays: { type: [String], default: [] },
+  slotDurationMinutes: { type: Number },
+  slotsStartTime: { type: String },
+  slotsEndTime: { type: String },
   tags: [String],
   serviceArea: {
     lat: { type: Number },
