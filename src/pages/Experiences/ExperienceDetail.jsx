@@ -40,6 +40,35 @@ const ExperienceDetail = () => {
   }, [id]);
 
   const [availableDates, setAvailableDates] = useState([]);
+  const [mapCenter, setMapCenter] = useState(null);
+
+  useEffect(() => {
+    if (experience?.location || experience?.city) {
+      const searchQuery = experience.location || experience.city;
+      if (experience.meetingPoint?.lat) {
+        setMapCenter({
+          lat: experience.meetingPoint.lat,
+          lng: experience.meetingPoint.lng,
+          address: experience.meetingPoint.address || searchQuery
+        });
+      } else {
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`)
+          .then(res => res.json())
+          .then(results => {
+            if (results && results.length > 0) {
+              setMapCenter({
+                lat: parseFloat(results[0].lat),
+                lng: parseFloat(results[0].lon),
+                address: searchQuery
+              });
+            } else {
+              setMapCenter({ lat: 28.6139, lng: 77.2090, address: searchQuery }); // Default Delhi
+            }
+          })
+          .catch(() => setMapCenter({ lat: 28.6139, lng: 77.2090, address: searchQuery }));
+      }
+    }
+  }, [experience]);
 
   useEffect(() => {
     if (experience) {
@@ -234,7 +263,15 @@ const ExperienceDetail = () => {
         </div>
       </div>
 
-      <ExperiencePhotoGrid images={experience.images || []} />
+      <ExperiencePhotoGrid images={
+        (experience.images || []).filter(Boolean).length > 0
+          ? experience.images.filter(Boolean)
+          : [
+              'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&q=80',
+              'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80',
+              'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'
+            ]
+      } />
 
       <div className="w-full max-w-[1120px] mx-auto px-6 mt-8 flex flex-col md:flex-row gap-12 relative">
         {/* ── Left column ── */}
@@ -322,8 +359,8 @@ const ExperienceDetail = () => {
           />
 
           {/* ── Meeting point map (Task 1) ── */}
-          {mp?.lat && mp?.lng && (
-            <MeetingPointMap lat={mp.lat} lng={mp.lng} address={mp.address} />
+          {mapCenter && (
+            <MeetingPointMap lat={mapCenter.lat} lng={mapCenter.lng} address={mapCenter.address} />
           )}
         </div>
 

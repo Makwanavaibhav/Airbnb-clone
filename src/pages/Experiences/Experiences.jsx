@@ -22,6 +22,7 @@ export default function Experiences() {
   const [error, setError] = useState(null);
 
   const destination = appliedSearch?.destination || '';
+  const searchGuests = (appliedSearch?.guests?.adults || 0) + (appliedSearch?.guests?.children || 0);
   const displayDest = destination || 'your area';
 
   useEffect(() => {
@@ -35,6 +36,8 @@ export default function Experiences() {
         if (!cancelled) {
           const allListings = Array.isArray(data) ? data : [];
           const filtered = allListings.filter(l => {
+            if (searchGuests > 0 && l.groupSize && searchGuests > l.groupSize) return false;
+
             if (!destination || destination.trim() === '' || destination.toLowerCase() === 'anywhere' || destination.toLowerCase() === 'nearby') 
               return true;
             

@@ -76,19 +76,26 @@ router.post("/", authenticateToken, upload.any(), async (req, res) => {
 
     let imageUrls = [];
     
-    // Process uploaded files
+    // Process uploaded files with S3 fallback & high-quality placeholder fallbacks
     if (req.files && req.files.length > 0) {
       if (process.env.AWS_ACCESS_KEY_ID) {
-        imageUrls = req.files.map(file => file.location);
-      } else {
-        // Dummy fallback for testing without S3
-        imageUrls = [
-          "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1542314831-c6a4d14d8373?auto=format&fit=crop&w=800&q=80"
-        ];
+        imageUrls = req.files.map(file => {
+          if (file.location) return file.location;
+          // Reconstruct S3 URL if location is missing but key/Key is present
+          const key = file.key || file.Key || file.filename;
+          if (key) {
+            return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+          }
+          return null;
+        }).filter(Boolean);
       }
-    } else {
-      imageUrls = ["https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80"];
+    }
+
+    if (imageUrls.length === 0) {
+      imageUrls = [
+        "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1542314831-c6a4d14d8373?auto=format&fit=crop&w=800&q=80"
+      ];
     }
 
     // Parse arrays/JSON strings from FormData

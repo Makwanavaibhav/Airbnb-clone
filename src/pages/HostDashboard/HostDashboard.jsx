@@ -104,11 +104,29 @@ const HostDashboard = () => {
   const fetchListings = async () => {
     setLoadingListings(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/hotels/host/me`, {
-        headers: { Authorization: `Bearer ${getToken()}` }
-      });
-      const data = await response.json();
-      if (data.success) setProperties(data.properties);
+      const [hotelsRes, listingsRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/hotels/host/me`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        }),
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/listings/host/me`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        })
+      ]);
+      const hotelsData = await hotelsRes.json();
+      const listingsData = await listingsRes.json();
+
+      let allProperties = [];
+      if (hotelsData.success) {
+        allProperties = [...allProperties, ...hotelsData.properties];
+      }
+      if (listingsData.success) {
+        allProperties = [...allProperties, ...listingsData.listings];
+      }
+      
+      // Sort by newest
+      allProperties.sort((a, b) => new Date(b.createdAt || b.submitted_at || 0) - new Date(a.createdAt || a.submitted_at || 0));
+      
+      setProperties(allProperties);
     } catch (err) { console.error(err); }
     finally { setLoadingListings(false); }
   };
@@ -135,63 +153,116 @@ const HostDashboard = () => {
   const handleResumeDraft = (draft) => { setResumeDraft(draft); setShowListingForm(true); };
 
   // Bug #11 fix: shared card renderer used by both published and draft sections
-  const renderPropertyCard = (prop) => (
-    <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
-      <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
-        <img src={prop.image || prop.images?.[0]} alt={prop.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
-        {/* Status badge */}
-        <div className="absolute top-3 left-3">
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${
-            prop.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full inline-block ${prop.status === 'published' ? 'bg-green-500' : 'bg-amber-400'}`} />
-            {prop.status === 'published' ? 'Published' : 'Draft'}
-          </span>
+  const renderPropertyCard = (prop) => {
+    const isExpOrSvc = prop._listingType === 'experience' || prop._listingType === 'service';
+    const isLive = prop.status === 'published' || prop.listing_status === 'active';
+    
+    let priceLabel = "/ night";
+    let priceVal = prop.priceRaw || prop.pricePerNight || 0;
+    if (prop._listingType === 'experience') {
+      priceLabel = "/ person";
+      priceVal = prop.pricePerPerson || 0;
+    } else if (prop._listingType === 'service') {
+      priceLabel = "/ session";
+      priceVal = prop.pricePerSession || 0;
+    }
+
+    let statusText = prop.status === 'published' ? 'Published' : 'Draft';
+    let statusClass = prop.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+    let dotClass = prop.status === 'published' ? 'bg-green-500' : 'bg-amber-400';
+
+    if (isExpOrSvc) {
+      if (prop.listing_status === 'active') {
+        statusText = 'Live';
+        statusClass = 'bg-green-100 text-green-800';
+        dotClass = 'bg-green-500';
+      } else if (prop.listing_status === 'pending_review') {
+        statusText = 'Pending Review';
+        statusClass = 'bg-amber-100 text-amber-800';
+        dotClass = 'bg-amber-400';
+      } else if (prop.listing_status === 'rejected') {
+        statusText = 'Rejected';
+        statusClass = 'bg-red-100 text-red-800';
+        dotClass = 'bg-red-500';
+      } else {
+        statusText = 'Draft';
+        statusClass = 'bg-gray-100 text-gray-800';
+        dotClass = 'bg-gray-400';
+      }
+    }
+
+    return (
+      <div key={prop._id} className="bg-white border hover:shadow-lg transition-shadow rounded-2xl overflow-hidden group">
+        <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
+          <img src={prop.image || prop.images?.[0]} alt={prop.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={e => { e.target.onerror = null; e.target.src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80`; }} />
+          {/* Status badge */}
+          <div className="absolute top-3 left-3">
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${statusClass}`}>
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${dotClass}`} />
+              {statusText}
+            </span>
+          </div>
+          <div className="absolute top-4 right-4 flex gap-2">
+            {!isExpOrSvc && (
+              <button onClick={() => setEditingProperty(prop)}
+                className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
+                <Edit2 className="w-4 h-4 text-gray-700" />
+              </button>
+            )}
+            <button onClick={() => handleDelete(prop._id || prop.id)}
+              className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
+              <Trash2 className="w-4 h-4 text-red-600" />
+            </button>
+          </div>
         </div>
-        <div className="absolute top-4 right-4 flex gap-2">
-          <button onClick={() => setEditingProperty(prop)}
-            className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
-            <Edit2 className="w-4 h-4 text-gray-700" />
-          </button>
-          <button onClick={() => handleDelete(prop._id || prop.id)}
-            className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow">
-            <Trash2 className="w-4 h-4 text-red-600" />
-          </button>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-1 gap-2">
+            <h3 className="font-semibold text-[17px] truncate flex-1">{prop.title}</h3>
+            {isExpOrSvc && (
+              <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                {prop._listingType}
+              </span>
+            )}
+          </div>
+          <p className="text-gray-500 text-[15px] truncate">{prop.location || prop.city}</p>
+          <div className="mt-2 text-[15px] font-semibold">
+            ₹{priceVal.toLocaleString("en-IN")}{" "}
+            <span className="font-normal text-gray-500">{priceLabel}</span>
+          </div>
+          
+          {!isExpOrSvc ? (
+            <button
+              onClick={async () => {
+                const newStatus = prop.status === 'published' ? 'draft' : 'published';
+                try {
+                  const res = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/hotels/${prop._id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                    body: JSON.stringify({ status: newStatus })
+                  });
+                  if (res.ok) fetchListings();
+                  else alert('Failed to update listing status.');
+                } catch (err) { console.error(err); }
+              }}
+              className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+                prop.status === 'published'
+                  ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  : 'bg-[#E01561] hover:bg-[#D70466] text-white'
+              }`}
+            >
+              {prop.status === 'published' ? 'Unpublish' : 'Publish listing'}
+            </button>
+          ) : (
+            <div className="mt-3 text-xs font-semibold text-center py-2 text-gray-500 bg-gray-50 rounded-lg border">
+              {prop.listing_status === 'active' ? 'Live on platform' : prop.listing_status === 'pending_review' ? 'Awaiting Admin Approval' : prop.listing_status === 'rejected' ? 'Review Rejected by Admin' : 'Draft Mode'}
+            </div>
+          )}
         </div>
       </div>
-      <div className="p-4">
-        <h3 className="font-semibold text-[17px] truncate">{prop.title}</h3>
-        <p className="text-gray-500 text-[15px] truncate">{prop.location}</p>
-        <div className="mt-2 text-[15px] font-semibold">
-          ₹{(prop.priceRaw || prop.pricePerNight || 0).toLocaleString("en-IN")}{" "}
-          <span className="font-normal text-gray-500">/ night</span>
-        </div>
-        <button
-          onClick={async () => {
-            const newStatus = prop.status === 'published' ? 'draft' : 'published';
-            try {
-              const res = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}`}/api/hotels/${prop._id}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-                body: JSON.stringify({ status: newStatus })
-              });
-              if (res.ok) fetchListings();
-              else alert('Failed to update listing status.');
-            } catch (err) { console.error(err); }
-          }}
-          className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
-            prop.status === 'published'
-              ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-              : 'bg-[#E01561] hover:bg-[#D70466] text-white'
-          }`}
-        >
-          {prop.status === 'published' ? 'Unpublish' : 'Publish listing'}
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (!isLoggedIn) { navigate("/login"); return null; }
 
@@ -439,9 +510,9 @@ const HostDashboard = () => {
                     </div>
                   </div>
                 ) : properties.length > 0 && (() => {
-                  // Bug #11 fix: split into published vs draft accurately
-                  const publishedProps = properties.filter(p => p.status === 'published');
-                  const draftProps = properties.filter(p => p.status !== 'published');
+                  // Bug #11 fix: split into published vs draft accurately (checking both hotels and exp/svc)
+                  const publishedProps = properties.filter(p => p.status === 'published' || p.listing_status === 'active');
+                  const draftProps = properties.filter(p => p.status !== 'published' && p.listing_status !== 'active');
                   return (
                   <div className="w-full">
                     {publishedProps.length > 0 && (

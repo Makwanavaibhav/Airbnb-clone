@@ -7,6 +7,7 @@ import ReviewsList from '../../components/ReviewsList';
 import WriteReview from '../../components/WriteReview';
 import StripeCheckout from '../../components/StripeCheckout';
 import { useSearch } from '../../context/SearchContext';
+import ExperiencePhotoGrid from '../Experiences/components/ExperiencePhotoGrid';
 
 const ServiceDetail = () => {
   const { id } = useParams();
@@ -90,6 +91,36 @@ const ServiceDetail = () => {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  const [mapCenter, setMapCenter] = useState(null);
+
+  useEffect(() => {
+    if (service?.location || service?.city) {
+      const searchQuery = service.location || service.city;
+      if (service.serviceArea?.lat) {
+        setMapCenter({
+          lat: service.serviceArea.lat,
+          lng: service.serviceArea.lng,
+          radiusMeters: service.serviceArea.radiusMeters || 15000
+        });
+      } else {
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`)
+          .then(res => res.json())
+          .then(results => {
+            if (results && results.length > 0) {
+              setMapCenter({
+                lat: parseFloat(results[0].lat),
+                lng: parseFloat(results[0].lon),
+                radiusMeters: 15000
+              });
+            } else {
+              setMapCenter({ lat: 28.6139, lng: 77.2090, radiusMeters: 15000 }); // Default Delhi
+            }
+          })
+          .catch(() => setMapCenter({ lat: 28.6139, lng: 77.2090, radiusMeters: 15000 }));
+      }
+    }
+  }, [service]);
 
   // Auto-populate available slot from search context
   useEffect(() => {
@@ -195,17 +226,16 @@ const ServiceDetail = () => {
       </div>
 
       {/* Photo grid */}
-      <div className="w-full max-w-[1120px] mx-auto px-4 md:px-6 mb-8">
-        <div className="grid grid-cols-2 gap-3 rounded-2xl overflow-hidden aspect-[2/1]">
-          <img
-            src={service.images?.[0] || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800'}
-            alt={service.title}
-            className="w-full h-full object-cover col-span-1 row-span-2"
-          />
-          {service.images?.[1] && (
-            <img src={service.images[1]} alt={service.title} className="w-full h-full object-cover" />
-          )}
-        </div>
+      <div className="mb-8">
+        <ExperiencePhotoGrid images={
+          (service.images || []).filter(Boolean).length > 0 
+            ? service.images.filter(Boolean) 
+            : [
+                'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80',
+                'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80',
+                'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80'
+              ]
+        } />
       </div>
 
       <div className="w-full max-w-[1120px] mx-auto px-6 flex flex-col md:flex-row gap-12">
@@ -281,8 +311,8 @@ const ServiceDetail = () => {
           />
 
           {/* ── Service area map (Task 2) ── */}
-          {sa?.lat && sa?.lng && (
-            <ServiceAreaMap lat={sa.lat} lng={sa.lng} radiusMeters={sa.radiusMeters} />
+          {mapCenter && (
+            <ServiceAreaMap lat={mapCenter.lat} lng={mapCenter.lng} radiusMeters={mapCenter.radiusMeters} />
           )}
         </div>
 
